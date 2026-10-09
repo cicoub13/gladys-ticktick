@@ -18,41 +18,30 @@ when a task reaches its due time.
 
 ## Connecting your account
 
-Two ways, pick one.
-
-### Option 1: TickTick app (recommended)
-
 1. Open the [TickTick developer site](https://developer.ticktick.com/manage),
    sign in with your TickTick account and click **New App**. Any name will do,
    e.g. "Gladys".
 2. Open the new app and click **Edit**. In **OAuth redirect URL**, paste the
    **redirect URI** shown in the Gladys configuration screen, under the
    **Connect** button (usually `https://my.gladysassistant.com/redirect/oauth`),
-   and save.
+   and save. Without it, TickTick answers "At least one redirect_uri must be
+   registered with the client".
 3. Copy the app's **Client ID** and **Client secret** into the Gladys
-   configuration screen and click **Save**.
-4. Click **Connect**: TickTick asks you to allow access to your tasks. Accept.
-   You are brought back to Gladys, and the status turns to connected.
+   configuration screen and click **Save**, at the bottom of the form.
+4. **Only then** click **Connect**: the button does not save the form, and the
+   integration only sees saved values. TickTick asks you to allow access to
+   your tasks. Accept. You are brought back to Gladys, and the status turns to
+   connected.
 
 The access granted lasts several months. When TickTick ends it, the status of
 the integration says so: click **Connect** again.
-
-### Option 2: personal API token
-
-If your TickTick account offers a personal API token (**Settings > Account >
-API Token** in the TickTick web app), paste it in **Personal API token** and
-click **Save**. No developer app is needed.
-
-When both are set, the connected account is used first, and the token takes
-over if TickTick refuses the account.
 
 ## Configuration
 
 | Field                      | Description                                                                                                  |
 | -------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| **Client ID / secret**     | From your TickTick developer app (option 1).                                                                 |
-| **TickTick account**       | The **Connect** button (option 1).                                                                           |
-| **Personal API token**     | Option 2.                                                                                                    |
+| **Client ID / secret**     | From your TickTick developer app.                                                                            |
+| **TickTick account**       | The **Connect** button, once the Client ID and secret are saved.                                             |
 | **Refresh frequency**      | How often TickTick is read: 1 minute, 5 minutes (default) or 15 minutes.                                     |
 | **Hour for all-day tasks** | Hour (0-23, default 9) at which the "TickTick task due" trigger fires for a task that has a day but no time. |
 
@@ -112,16 +101,17 @@ and the first task's `next_title`, `next_list`, `next_due_date` and
 
 ## Troubleshooting
 
-| Message                                                    | What to do                                                                                                                             |
-| ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| _Connect your TickTick account, or enter a personal token_ | Nothing is connected yet: follow "Connecting your account".                                                                            |
-| _Enter the Client ID..._ / _Enter the Client secret..._    | Fill them in and **Save** before clicking **Connect**.                                                                                 |
-| _There was an error starting the connection_ (Gladys)      | Gladys does not show the cause: it is in the integration logs ("TickTick connection failed"). Usually the Client ID was not saved.     |
-| _TickTick refused the access_                              | The access was revoked or expired, or the token is wrong: click **Connect** again (or paste a new token). Refreshing waits until then. |
-| _The TickTick authorization expired or does not match_     | More than 15 minutes passed on the TickTick page, or the integration restarted meanwhile: click **Connect** again.                     |
-| TickTick says the redirect URL is invalid                  | The **OAuth redirect URL** of your developer app must be exactly the redirect URI shown in Gladys.                                     |
-| _TickTick cannot be reached_ / _did not answer in time_    | Check the Internet connection of the Gladys machine. The integration retries at every refresh.                                         |
-| _TickTick limits the number of requests_                   | Choose a longer refresh frequency.                                                                                                     |
+| Message                                                  | What to do                                                                                                                         |
+| -------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| _Connect your TickTick account_                          | Nothing is connected yet: follow "Connecting your account".                                                                        |
+| _No saved Client ID_ / _No saved Client secret_          | Fill them in and click **Save** before clicking **Connect**.                                                                       |
+| _There was an error starting the connection_ (Gladys)    | Gladys does not show the cause: it is in the integration logs ("TickTick connection failed"). Usually the Client ID was not saved. |
+| _TickTick refused the access_                            | The access was revoked or expired: click **Connect** again. Refreshing waits until then.                                           |
+| _The TickTick authorization expired or does not match_   | More than 15 minutes passed on the TickTick page, or the integration restarted meanwhile: click **Connect** again.                 |
+| TickTick: _At least one redirect_uri must be registered_ | Your developer app has no **OAuth redirect URL**: set it to the redirect URI shown in Gladys (step 2).                             |
+| TickTick says the redirect URL is invalid                | The **OAuth redirect URL** of your developer app must be exactly the redirect URI shown in Gladys.                                 |
+| _TickTick cannot be reached_ / _did not answer in time_  | Check the Internet connection of the Gladys machine. The integration retries at every refresh.                                     |
+| _TickTick limits the number of requests_                 | Choose a longer refresh frequency.                                                                                                 |
 
 The integration logs (Supervision tab of the integration) give the details of
 every failure; your token never appears in them.

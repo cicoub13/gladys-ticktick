@@ -12,9 +12,8 @@ JavaScript SDK
 
 ## Features
 
-- **Connection** through OAuth2 (a TickTick developer app, the **Connect**
-  button of Gladys) or a personal API token; the token takes over when TickTick
-  refuses the OAuth access.
+- **Connection** through OAuth2: a TickTick developer app, then the
+  **Connect** button of Gladys.
 - **TickTick tasks** widget: overdue / today counters and up to 8 tasks with
   their list, due time, priority, notes and a link to TickTick. Scope per
   widget: today and overdue, today, overdue, next 7 days.
@@ -39,13 +38,14 @@ JavaScript SDK
 | Field                  | Description                                                            |
 | ---------------------- | ---------------------------------------------------------------------- |
 | Client ID / secret     | From an app created at https://developer.ticktick.com/manage.          |
-| TickTick account       | OAuth2 **Connect** button.                                             |
-| Personal API token     | Alternative to the app, used when no OAuth access works.               |
+| TickTick account       | OAuth2 **Connect** button, once the Client ID and secret are saved.    |
 | Refresh frequency      | 1 minute, 5 minutes (default) or 15 minutes.                           |
 | Hour for all-day tasks | Hour (0-23, default 9) at which the trigger fires for an all-day task. |
 
 The redirect URI to register in the TickTick app is shown by Gladys under the
-**Connect** button. Full user documentation, including troubleshooting:
+**Connect** button. The Connect button does not save the form: the Client ID
+and secret must be saved first (a section of the form says so right above the
+button). Full user documentation, including troubleshooting:
 [`docs/en.md`](./docs/en.md) / [`docs/fr.md`](./docs/fr.md).
 
 ## Development

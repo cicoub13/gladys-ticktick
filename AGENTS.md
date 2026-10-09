@@ -5,10 +5,10 @@ Project-specific notes. Generic rules (SDK contract, commands, kit-owned files, 
 
 ## Data flow
 
-- `index.js` -> `TickTickIntegration` (`src/integration.js`) holds everything: `tokens` (+
-  `tokenIndex`), `client`, `poller`, last `snapshot`, `lastError` ({en, fr}), `oauthState`,
-  `scheduler` (`TaskDueScheduler`), `fingerprint` of the tasks last shown.
-- `applyConfig()` resets all state, bumps `generation`, builds a client for the first token,
+- `index.js` -> `TickTickIntegration` (`src/integration.js`) holds everything: `client`,
+  `poller`, last `snapshot`, `lastError` ({en, fr}), `oauthState`, `scheduler`
+  (`TaskDueScheduler`), `fingerprint` of the tasks last shown.
+- `applyConfig()` resets all state, bumps `generation`, builds a client for the OAuth token,
   starts a `Poller`. A poll whose `generation` is stale when it resolves publishes nothing.
 - `poll()`: `fetchSnapshot()` -> `scheduler.reschedule()` -> `requestWidgetRefresh('tasks')` only
   when the fingerprint changed or after a failure -> `reportConnection(true)`. Never throws.
@@ -17,22 +17,30 @@ Project-specific notes. Generic rules (SDK contract, commands, kit-owned files, 
 
 ## Auth
 
-- Tokens, in order (`listTokens`, `src/config.js`): `oauth_access_token` (stored by
-  `setConfig`, a key OUTSIDE `config_schema`, never shown in the UI), then `api_token` (secret
-  field). An `auth` failure moves to the next token at once; on the last one polling stops
-  until a config change, a new OAuth connection or a successful `test_connection`.
+- OAuth only (a personal API token path existed briefly and was dropped before the first
+  release). The token is `oauth_access_token`, stored by `setConfig` under a key OUTSIDE
+  `config_schema`, never shown in the UI. An `auth` failure stops polling until a config
+  change, a new OAuth connection or a successful `test_connection`.
 - OAuth2 (`src/oauth.js`): authorize `https://ticktick.com/oauth/authorize`, token
   `POST https://ticktick.com/oauth/token` (form-urlencoded, client id/secret in HTTP Basic),
   scopes `tasks:read tasks:write`. The `redirectUri` comes from Gladys and is reused byte for
   byte; never hardcode it. TickTick documents no refresh token nor `expires_in` (community:
   about 6 months), so there is no refresh: on 401 the user reconnects.
 - `oauthState` is in memory, single-use, 15 min TTL: a restart between Connect and the callback
-  means clicking Connect again. The authorize handler re-reads `getConfig()` (the user saves the
-  Client ID right before clicking Connect).
+  means clicking Connect again.
+- **The Connect button of Gladys does not save the form**, and the authorize handler can only
+  read the saved config (`getConfig()`): a Client ID typed but not saved is invisible. Hence the
+  `save_before_connect` section right above the `oauth2` field (`test/manifest.test.js` keeps
+  it there) and the "No saved Client ID" message. Only the Client ID is needed for the URL; the
+  secret is checked on the callback.
+- The SDK does not log a failing handler and Gladys shows a generic "error starting the
+  connection": `logOAuthFailure` logs every OAuth failure in the integration logs.
+- TickTick refuses the authorize step ("At least one redirect_uri must be registered with the
+  client") when the developer app has no OAuth redirect URL.
 - `setConfig` from the integration is NOT echoed as `config-updated` by Gladys, hence the
   explicit `applyConfig` at the end of `oauthCallback`.
-- **Not verified against a real account yet**: whether TickTick accepts the long `state`
-  Gladys wraps (base64url JSON, up to 4096 chars), and the personal API token path.
+- Verified on a real account (2026-10-09): the full OAuth round trip through
+  `my.gladysassistant.com` (TickTick accepts the long wrapped `state`) and the widget.
 
 ## TickTick API (`src/ticktick/client.js`)
 

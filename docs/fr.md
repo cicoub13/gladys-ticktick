@@ -19,42 +19,32 @@ notification, et un déclencheur de scène qui part quand une tâche arrive à
 
 ## Connecter votre compte
 
-Deux possibilités, au choix.
-
-### Option 1 : application TickTick (recommandée)
-
 1. Ouvrez le [site développeur de TickTick](https://developer.ticktick.com/manage),
    connectez-vous avec votre compte TickTick et cliquez sur **New App**. Le nom
    n'a pas d'importance, par exemple « Gladys ».
 2. Ouvrez la nouvelle application et cliquez sur **Edit**. Dans **OAuth
    redirect URL**, collez l'**URI de redirection** affichée dans l'écran de
    configuration de Gladys, sous le bouton **Connecter** (en général
-   `https://my.gladysassistant.com/redirect/oauth`), puis enregistrez.
+   `https://my.gladysassistant.com/redirect/oauth`), puis enregistrez. Sans
+   elle, TickTick répond « At least one redirect_uri must be registered with
+   the client ».
 3. Copiez le **Client ID** et le **Client secret** de l'application dans l'écran
-   de configuration de Gladys et cliquez sur **Enregistrer**.
-4. Cliquez sur **Connecter** : TickTick vous demande d'autoriser l'accès à vos
-   tâches. Acceptez. Vous revenez dans Gladys et le statut passe à connecté.
+   de configuration de Gladys et cliquez sur **Enregistrer**, en bas du
+   formulaire.
+4. **Ensuite seulement**, cliquez sur **Connecter** : le bouton n'enregistre pas
+   le formulaire, et l'intégration ne voit que les valeurs enregistrées.
+   TickTick vous demande d'autoriser l'accès à vos tâches. Acceptez. Vous
+   revenez dans Gladys et le statut passe à connecté.
 
 L'accès accordé dure plusieurs mois. Quand TickTick y met fin, le statut de
 l'intégration l'indique : cliquez à nouveau sur **Connecter**.
-
-### Option 2 : jeton d'API personnel
-
-Si votre compte TickTick propose un jeton d'API personnel (**Paramètres >
-Compte > API Token** dans l'application web TickTick), collez-le dans **Jeton
-d'API personnel** et cliquez sur **Enregistrer**. Aucune application
-développeur n'est nécessaire.
-
-Si les deux sont renseignés, le compte connecté est utilisé en priorité, et le
-jeton prend le relais si TickTick refuse le compte.
 
 ## Configuration
 
 | Champ                           | Description                                                                                                                            |
 | ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| **Client ID / secret**          | Ceux de votre application développeur TickTick (option 1).                                                                             |
-| **Compte TickTick**             | Le bouton **Connecter** (option 1).                                                                                                    |
-| **Jeton d'API personnel**       | Option 2.                                                                                                                              |
+| **Client ID / secret**          | Ceux de votre application développeur TickTick.                                                                                        |
+| **Compte TickTick**             | Le bouton **Connecter**, une fois le Client ID et le secret enregistrés.                                                               |
 | **Fréquence d'actualisation**   | Fréquence de lecture de TickTick : 1 minute, 5 minutes (par défaut) ou 15 minutes.                                                     |
 | **Heure des tâches sans heure** | Heure (0-23, 9 par défaut) à laquelle le déclencheur « Tâche TickTick à échéance » part pour une tâche qui a un jour mais pas d'heure. |
 
@@ -121,11 +111,12 @@ est supérieur à 0, envoyer « Aujourd'hui : {{titles}} » en notification.
 
 | Message                                                         | Que faire                                                                                                                                                           |
 | --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| _Connectez votre compte TickTick, ou saisissez un jeton d'API…_ | Rien n'est encore connecté : suivez « Connecter votre compte ».                                                                                                     |
-| _Saisissez le Client ID…_ / _Saisissez le Client secret…_       | Renseignez-les et **Enregistrez** avant de cliquer sur **Connecter**.                                                                                               |
+| _Connectez votre compte TickTick_                               | Rien n'est encore connecté : suivez « Connecter votre compte ».                                                                                                     |
+| _Aucun Client ID enregistré_ / _Aucun Client secret enregistré_ | Renseignez-les et cliquez sur **Enregistrer** avant de cliquer sur **Connecter**.                                                                                   |
 | _Erreur au lancement de la connexion_ (affiché par Gladys)      | Gladys n'affiche pas la cause : elle est dans les journaux de l'intégration (« TickTick connection failed »). Le plus souvent, le Client ID n'a pas été enregistré. |
-| _TickTick a refusé l'accès_                                     | L'accès a été révoqué ou a expiré, ou le jeton est faux : cliquez à nouveau sur **Connecter** (ou collez un nouveau jeton). L'actualisation attend d'ici là.        |
+| _TickTick a refusé l'accès_                                     | L'accès a été révoqué ou a expiré : cliquez à nouveau sur **Connecter**. L'actualisation attend d'ici là.                                                           |
 | _L'autorisation TickTick a expiré ou ne correspond pas_         | Plus de 15 minutes se sont écoulées sur la page TickTick, ou l'intégration a redémarré entre-temps : cliquez à nouveau sur **Connecter**.                           |
+| TickTick : _At least one redirect_uri must be registered_       | Votre application développeur n'a pas d'**OAuth redirect URL** : indiquez l'URI de redirection affichée dans Gladys (étape 2).                                      |
 | TickTick indique que l'URL de redirection est invalide          | L'**OAuth redirect URL** de votre application développeur doit être exactement l'URI de redirection affichée dans Gladys.                                           |
 | _TickTick est injoignable_ / _n'a pas répondu à temps_          | Vérifiez la connexion Internet de la machine Gladys. L'intégration réessaie à chaque actualisation.                                                                 |
 | _TickTick limite le nombre de requêtes_                         | Choisissez une fréquence d'actualisation plus longue.                                                                                                               |

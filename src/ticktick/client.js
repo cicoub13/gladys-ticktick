@@ -88,7 +88,7 @@ export class TickTickClient {
 
   /**
    * @param {object} options
-   * @param {string} options.token - OAuth access token or personal API token.
+   * @param {string} options.token - OAuth access token.
    * @param {typeof fetch} [options.fetchImpl] - Injectable for tests.
    * @param {number} [options.timeoutMs] - Deadline of one request (headers AND body).
    */
@@ -186,8 +186,8 @@ export function describeError(err) {
   switch (err.kind) {
     case 'auth':
       return {
-        en: 'TickTick refused the access. Reconnect your account (or check your API token) in the integration settings.',
-        fr: "TickTick a refusé l'accès. Reconnectez votre compte (ou vérifiez votre jeton d'API) dans les paramètres de l'intégration.",
+        en: 'TickTick refused the access. Click Connect again in the integration settings.',
+        fr: "TickTick a refusé l'accès. Cliquez à nouveau sur Connecter dans les paramètres de l'intégration.",
       };
     case 'timeout':
       return {

@@ -17,8 +17,8 @@
       "type": "section",
       "label": { "en": "Connect your TickTick account", "fr": "Connecter votre compte TickTick" },
       "description": {
-        "en": "1. On the TickTick developer site, create an app (Manage Apps > New App). 2. In its settings, set the OAuth redirect URL to the redirect URI shown below the Connect button. 3. Copy its Client ID and Client secret here, save, then click Connect.",
-        "fr": "1. Sur le site développeur de TickTick, créez une application (Manage Apps > New App). 2. Dans ses réglages, indiquez comme OAuth redirect URL l'URI de redirection affichée sous le bouton Connecter. 3. Copiez ici son Client ID et son Client secret, enregistrez, puis cliquez sur Connecter."
+        "en": "1. On the TickTick developer site, create an app (Manage Apps > New App). 2. In its settings, set the OAuth redirect URL to the redirect URI shown below the Connect button. 3. Copy its Client ID and Client secret here and click Save (bottom of the form). 4. Only then click Connect.",
+        "fr": "1. Sur le site développeur de TickTick, créez une application (Manage Apps > New App). 2. Dans ses réglages, indiquez comme OAuth redirect URL l'URI de redirection affichée sous le bouton Connecter. 3. Copiez ici son Client ID et son Client secret et cliquez sur Enregistrer (en bas du formulaire). 4. Ensuite seulement, cliquez sur Connecter."
       },
       "links": [
         {
@@ -40,27 +40,21 @@
       "required": false
     },
     {
-      "key": "ticktick_account",
-      "type": "oauth2",
-      "label": { "en": "TickTick account", "fr": "Compte TickTick" }
-    },
-    {
-      "key": "api_token_intro",
+      "key": "save_before_connect",
       "type": "section",
       "label": {
-        "en": "Or use a personal API token",
-        "fr": "Ou utilisez un jeton d'API personnel"
+        "en": "Click Save before Connect",
+        "fr": "Cliquez sur Enregistrer avant Connecter"
       },
       "description": {
-        "en": "If your TickTick account offers an API token (Settings > Account > API Token), you can paste it here instead of creating an app. The connected account is used first when both are set.",
-        "fr": "Si votre compte TickTick propose un jeton d'API (Paramètres > Compte > API Token), vous pouvez le coller ici au lieu de créer une application. Le compte connecté est utilisé en priorité si les deux sont renseignés."
+        "en": "The Connect button does not save the form: after entering the Client ID and Client secret, first click Save at the bottom of the form, then come back here and click Connect.",
+        "fr": "Le bouton Connecter n'enregistre pas le formulaire : après avoir saisi le Client ID et le Client secret, cliquez d'abord sur Enregistrer en bas du formulaire, puis revenez ici et cliquez sur Connecter."
       }
     },
     {
-      "key": "api_token",
-      "type": "secret",
-      "label": { "en": "Personal API token", "fr": "Jeton d'API personnel" },
-      "required": false
+      "key": "ticktick_account",
+      "type": "oauth2",
+      "label": { "en": "TickTick account", "fr": "Compte TickTick" }
     },
     {
       "key": "settings_intro",

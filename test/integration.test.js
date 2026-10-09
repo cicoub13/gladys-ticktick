@@ -81,7 +81,7 @@ test('without any token the integration asks to connect and does not poll', asyn
 
 test('a successful poll reports the connection, nudges the widget and schedules the trigger', async () => {
   const { gladys, integration, timers, clients } = setup();
-  await integration.applyConfig({ api_token: 'tp', poll_frequency: '60' });
+  await integration.applyConfig({ oauth_access_token: 'tp', poll_frequency: '60' });
   assert.equal(clients[0].token, 'tp');
   assert.deepEqual(gladys.calls.connectionStatuses, [{ connected: true, message: undefined }]);
   assert.deepEqual(gladys.calls.widgetRefreshes, ['tasks']);
@@ -108,7 +108,7 @@ test('a TickTick outage is reported once, shown in the widget, and polling goes 
   const { gladys, integration, timers } = setup({
     outcomes: [outage, outage, snapshotOf()],
   });
-  await integration.applyConfig({ api_token: 'tp' });
+  await integration.applyConfig({ oauth_access_token: 'tp' });
   await integration.poll();
   assert.equal(gladys.calls.connectionStatuses.length, 1);
   assert.equal(gladys.calls.connectionStatuses[0].connected, false);
@@ -121,21 +121,9 @@ test('a TickTick outage is reported once, shown in the widget, and polling goes 
   assert.equal(integration.sceneTasksSummary({}).count, 1);
 });
 
-test('a refused OAuth token falls back to the API token right away', async () => {
-  const { gladys, integration, clients } = setup({
-    outcomes: [(client) => (client.token === 'oauth' ? Promise.reject(authError()) : snapshotOf())],
-  });
-  await integration.applyConfig({ oauth_access_token: 'oauth', api_token: 'tp' });
-  assert.deepEqual(
-    clients.map((client) => client.token),
-    ['oauth', 'tp'],
-  );
-  assert.deepEqual(gladys.calls.connectionStatuses, [{ connected: true, message: undefined }]);
-});
-
-test('a refused last token suspends polling until a successful test', async () => {
+test('a refused token suspends polling until a successful test', async () => {
   const { gladys, integration, timers } = setup({ outcomes: [authError(), snapshotOf()] });
-  await integration.applyConfig({ api_token: 'tp' });
+  await integration.applyConfig({ oauth_access_token: 'tp' });
   assert.equal(timers.length, 0);
   assert.match(gladys.calls.connectionStatuses[0].message.fr, /suspendues/);
   assert.equal(integration.poller.stopped, true);
@@ -148,7 +136,7 @@ test('a refused last token suspends polling until a successful test', async () =
 
 test('testConnection reports a TickTick failure in both languages', async () => {
   const { integration, clients } = setup();
-  await integration.applyConfig({ api_token: 'tp' });
+  await integration.applyConfig({ oauth_access_token: 'tp' });
   clients[0].listProjects = async () => {
     throw authError();
   };
@@ -159,7 +147,7 @@ test('Gladys-side failures during a poll are only logged', async () => {
   const { gladys, integration } = setup();
   gladys.failNext('setConnectionStatus', 1);
   gladys.failNext('requestWidgetRefresh', 1);
-  await integration.applyConfig({ api_token: 'tp' });
+  await integration.applyConfig({ oauth_access_token: 'tp' });
   assert.equal(gladys.calls.connectionStatuses.length, 0);
   await integration.poll();
   assert.equal(gladys.calls.connectionStatuses.length, 1);
@@ -175,8 +163,8 @@ test('a poll resolving after a config change publishes nothing', async () => {
     release = resolve;
   });
   const { gladys, integration } = setup({ outcomes: [() => pending, snapshotOf([])] });
-  const first = integration.applyConfig({ api_token: 'old' });
-  await integration.applyConfig({ api_token: 'new' });
+  const first = integration.applyConfig({ oauth_access_token: 'old' });
+  await integration.applyConfig({ oauth_access_token: 'new' });
   release(snapshotOf());
   await first;
   assert.equal(integration.snapshot.tasks.length, 0);
@@ -284,7 +272,7 @@ test('OAuth: a refused code exchange is reported in both languages', async () =>
 
 test('scene actions: create a task, then refresh; failures are readable', async () => {
   const { integration, clients, calls } = setup();
-  await integration.applyConfig({ api_token: 'tp' });
+  await integration.applyConfig({ oauth_access_token: 'tp' });
   const outputs = await integration.sceneCreateTask({ title: 'Buy bread', list_name: 'groceries' });
   assert.deepEqual(outputs, { task_id: 'new-id', list_name: 'Groceries' });
   assert.equal(clients[0].created[0].projectId, 'p-groceries');
@@ -300,7 +288,7 @@ test('scene actions: create a task, then refresh; failures are readable', async 
 
 test('the widget and the summary read the last snapshot', async () => {
   const { integration } = setup();
-  await integration.applyConfig({ api_token: 'tp' });
+  await integration.applyConfig({ oauth_access_token: 'tp' });
   const content = integration.widgetTasks({ settings: { scope: 'today' }, language: 'fr' });
   assert.equal(content.components[2].items[0].title, 'Buy milk');
   assert.equal(integration.widgetTasks().components[2].items.length, 1);

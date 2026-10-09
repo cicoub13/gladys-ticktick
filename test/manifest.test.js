@@ -94,9 +94,16 @@ test('no permission is requested that the integration does not use', () => {
 test('credentials are secrets, the account is an oauth2 field, the token stays off-schema', () => {
   assert.equal(configField('client_id').type, 'string');
   assert.equal(configField('client_secret').type, 'secret');
-  assert.equal(configField('api_token').type, 'secret');
   assert.equal(configField(OAUTH_FIELD_KEY).type, 'oauth2');
   assert.equal(configField(OAUTH_TOKEN_KEY), undefined);
+});
+
+test('the reminder to save comes right before the Connect button', () => {
+  // The Connect button does not save the form, and the integration only sees
+  // saved values: the reminder must sit where the user is about to click.
+  const keys = manifest.config_schema.map((entry) => entry.key);
+  assert.equal(keys[keys.indexOf(OAUTH_FIELD_KEY) - 1], 'save_before_connect');
+  assert.ok(keys.indexOf('client_secret') < keys.indexOf('save_before_connect'));
 });
 
 test('sections hold no value and only https links', () => {

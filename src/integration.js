@@ -5,14 +5,13 @@
 // so everything here runs against a fake Gladys and a fake client in the
 // tests. Structure borrowed from ../gladys-adguard-home/src/integration.js.
 //
-// Tokens: the OAuth one first, then the personal API token (config.js). When
-// TickTick refuses one, the next one is tried; when none is left, polling
-// stops until the user reconnects (no point hammering a revoked token).
+// When TickTick refuses the OAuth token, polling stops until the user
+// reconnects (no point hammering a revoked token).
 // -----------------------------------------------------------------------------
 
 import { randomUUID } from 'node:crypto';
 import { logger as defaultLogger } from '@gladysassistant/integration-sdk';
-import { OAUTH_TOKEN_KEY, listTokens, normalizeConfig } from './config.js';
+import { OAUTH_TOKEN_KEY, normalizeConfig } from './config.js';
 import { TickTickClient, describeError } from './ticktick/client.js';
 import { fetchSnapshot as defaultFetchSnapshot } from './ticktick/snapshot.js';
 import { buildAuthorizeUrl, exchangeCode as defaultExchangeCode } from './oauth.js';
@@ -25,18 +24,20 @@ import { TASK_DUE_KEY, TaskDueScheduler, buildTaskDueEventData } from './scene-e
 const OAUTH_STATE_TTL_MS = 15 * 60 * 1000;
 
 const NOT_CONNECTED = {
-  en: 'Connect your TickTick account, or enter a personal API token, in the configuration.',
-  fr: "Connectez votre compte TickTick, ou saisissez un jeton d'API personnel, dans la configuration.",
+  en: 'Connect your TickTick account in the configuration.',
+  fr: 'Connectez votre compte TickTick dans la configuration.',
 };
 
+// The Connect button does not save the form: the integration only sees the
+// saved values, hence the insistence on Save.
 const MISSING_CLIENT_ID = {
-  en: 'Enter the Client ID of your TickTick app, save, then click Connect.',
-  fr: 'Saisissez le Client ID de votre application TickTick, enregistrez, puis cliquez sur Connecter.',
+  en: 'No saved Client ID: enter it, click Save at the bottom of the form, then click Connect.',
+  fr: 'Aucun Client ID enregistré : saisissez-le, cliquez sur Enregistrer en bas du formulaire, puis sur Connecter.',
 };
 
 const MISSING_CLIENT_SECRET = {
-  en: 'Enter the Client secret of your TickTick app, save, then click Connect again.',
-  fr: 'Saisissez le Client secret de votre application TickTick, enregistrez, puis cliquez à nouveau sur Connecter.',
+  en: 'No saved Client secret: enter it, click Save at the bottom of the form, then click Connect again.',
+  fr: 'Aucun Client secret enregistré : saisissez-le, cliquez sur Enregistrer en bas du formulaire, puis à nouveau sur Connecter.',
 };
 
 const OAUTH_STATE_MISMATCH = {
@@ -107,8 +108,6 @@ export class TickTickIntegration {
     this.clearTimer = clearTimer;
 
     this.config = normalizeConfig();
-    this.tokens = [];
-    this.tokenIndex = 0;
     this.client = null;
     this.poller = null;
     this.snapshot = null;
@@ -142,8 +141,6 @@ export class TickTickIntegration {
     this.stop();
     this.generation += 1;
     this.config = normalizeConfig(rawConfig);
-    this.tokens = listTokens(this.config);
-    this.tokenIndex = 0;
     this.client = null;
     this.snapshot = null;
     this.fingerprint = null;
@@ -151,7 +148,7 @@ export class TickTickIntegration {
     this.reportedConnected = null;
     this.reportedReason = null;
 
-    if (this.tokens.length === 0) {
+    if (!this.config[OAUTH_TOKEN_KEY]) {
       this.logger.info('No TickTick account connected yet');
       this.lastError = NOT_CONNECTED;
       await this.reportConnection(false, NOT_CONNECTED);
@@ -159,10 +156,8 @@ export class TickTickIntegration {
       return;
     }
 
-    this.client = this.createClient(this.tokens[0].token);
-    this.logger.info(
-      `Polling TickTick every ${this.config.poll_frequency}s (${this.tokens[0].source} token)`,
-    );
+    this.client = this.createClient(this.config[OAUTH_TOKEN_KEY]);
+    this.logger.info(`Polling TickTick every ${this.config.poll_frequency}s`);
     this.poller = new Poller({
       run: () => this.poll(),
       intervalMs: this.config.poll_frequency * 1000,
@@ -217,17 +212,6 @@ export class TickTickIntegration {
   }
 
   async handlePollFailure(err) {
-    if (err?.kind === 'auth' && this.tokenIndex + 1 < this.tokens.length) {
-      // The OAuth token was revoked or expired: fall back to the API token
-      // right away rather than at the next period.
-      this.logger.warn(
-        `TickTick refused the ${this.tokens[this.tokenIndex].source} token, trying the next one`,
-      );
-      this.tokenIndex += 1;
-      this.client = this.createClient(this.tokens[this.tokenIndex].token);
-      await this.poll();
-      return;
-    }
     this.lastError = describeError(err);
     if (err?.kind === 'auth') {
       this.poller?.stop();
