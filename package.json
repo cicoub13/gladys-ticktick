@@ -1,6 +1,6 @@
 {
   "name": "gladys-ticktick",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "description": "TickTick external integration for Gladys Assistant: tasks widget, scene actions to create and list tasks, and a scene trigger when a task is due.",
   "type": "module",

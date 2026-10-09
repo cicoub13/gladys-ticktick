@@ -4,6 +4,8 @@ All notable changes to the TickTick integration for Gladys Assistant.
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-10-09
+
 ### Added
 
 - First release: connect your TickTick account (TickTick app and **Connect**
