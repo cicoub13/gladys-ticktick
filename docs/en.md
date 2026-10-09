@@ -115,7 +115,8 @@ and the first task's `next_title`, `next_list`, `next_due_date` and
 | Message                                                    | What to do                                                                                                                             |
 | ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
 | _Connect your TickTick account, or enter a personal token_ | Nothing is connected yet: follow "Connecting your account".                                                                            |
-| _Enter the Client ID and Client secret..._                 | Fill them in and **Save** before clicking **Connect**.                                                                                 |
+| _Enter the Client ID..._ / _Enter the Client secret..._    | Fill them in and **Save** before clicking **Connect**.                                                                                 |
+| _There was an error starting the connection_ (Gladys)      | Gladys does not show the cause: it is in the integration logs ("TickTick connection failed"). Usually the Client ID was not saved.     |
 | _TickTick refused the access_                              | The access was revoked or expired, or the token is wrong: click **Connect** again (or paste a new token). Refreshing waits until then. |
 | _The TickTick authorization expired or does not match_     | More than 15 minutes passed on the TickTick page, or the integration restarted meanwhile: click **Connect** again.                     |
 | TickTick says the redirect URL is invalid                  | The **OAuth redirect URL** of your developer app must be exactly the redirect URI shown in Gladys.                                     |

@@ -29,9 +29,14 @@ const NOT_CONNECTED = {
   fr: "Connectez votre compte TickTick, ou saisissez un jeton d'API personnel, dans la configuration.",
 };
 
-const MISSING_CLIENT = {
-  en: 'Enter the Client ID and Client secret of your TickTick app, save, then click Connect.',
-  fr: 'Saisissez le Client ID et le Client secret de votre application TickTick, enregistrez, puis cliquez sur Connecter.',
+const MISSING_CLIENT_ID = {
+  en: 'Enter the Client ID of your TickTick app, save, then click Connect.',
+  fr: 'Saisissez le Client ID de votre application TickTick, enregistrez, puis cliquez sur Connecter.',
+};
+
+const MISSING_CLIENT_SECRET = {
+  en: 'Enter the Client secret of your TickTick app, save, then click Connect again.',
+  fr: 'Saisissez le Client secret de votre application TickTick, enregistrez, puis cliquez à nouveau sur Connecter.',
 };
 
 const OAUTH_STATE_MISMATCH = {
@@ -286,20 +291,38 @@ export class TickTickIntegration {
   // --- OAuth2 ------------------------------------------------------------------
 
   /**
+   * Run an OAuth step, logging its failure: the SDK only hands the error
+   * message back to Gladys, whose Configuration screen shows a generic
+   * "could not start the connection", so without this the cause is nowhere.
+   */
+  async logOAuthFailure(step, run) {
+    try {
+      return await run();
+    } catch (err) {
+      this.logger.warn(`TickTick connection failed (${step}): ${err.message}`);
+      throw err;
+    }
+  }
+
+  /**
    * onOAuthAuthorizeUrl: the TickTick consent URL. The config is read fresh:
-   * the user may have saved the Client ID just before clicking Connect.
+   * the user may have saved the Client ID just before clicking Connect. Only
+   * the Client ID is needed here; the secret is checked on the callback.
    * @param {string} _key - The oauth2 field key (there is only one).
    * @param {string} redirectUri - Chosen by Gladys, used as is.
    * @returns {Promise<string>} The URL.
    */
-  async oauthAuthorizeUrl(_key, redirectUri) {
-    const config = normalizeConfig(await this.gladys.getConfig());
-    if (!config.client_id || !config.client_secret) {
-      throw new Error(bilingual(MISSING_CLIENT));
-    }
-    const state = this.createState();
-    this.oauthState = { value: state, expiresAt: this.now().getTime() + OAUTH_STATE_TTL_MS };
-    return buildAuthorizeUrl({ clientId: config.client_id, redirectUri, state });
+  oauthAuthorizeUrl(_key, redirectUri) {
+    return this.logOAuthFailure('authorize URL', async () => {
+      const config = normalizeConfig(await this.gladys.getConfig());
+      if (!config.client_id) {
+        throw new Error(bilingual(MISSING_CLIENT_ID));
+      }
+      const state = this.createState();
+      this.oauthState = { value: state, expiresAt: this.now().getTime() + OAUTH_STATE_TTL_MS };
+      this.logger.info('Opening the TickTick authorization page');
+      return buildAuthorizeUrl({ clientId: config.client_id, redirectUri, state });
+    });
   }
 
   /**
@@ -309,7 +332,11 @@ export class TickTickIntegration {
    * @param {{code: string, state: string, redirectUri: string}} params - From the provider redirect.
    * @returns {Promise<void>}
    */
-  async oauthCallback(_key, { code, state, redirectUri }) {
+  oauthCallback(_key, params) {
+    return this.logOAuthFailure('callback', () => this.completeOAuth(params));
+  }
+
+  async completeOAuth({ code, state, redirectUri }) {
     const expected = this.oauthState;
     this.oauthState = null;
     if (!expected || expected.value !== state || this.now().getTime() > expected.expiresAt) {
@@ -317,6 +344,9 @@ export class TickTickIntegration {
     }
     const rawConfig = await this.gladys.getConfig();
     const config = normalizeConfig(rawConfig);
+    if (!config.client_secret) {
+      throw new Error(bilingual(MISSING_CLIENT_SECRET));
+    }
     let token;
     try {
       token = await this.exchangeCode({

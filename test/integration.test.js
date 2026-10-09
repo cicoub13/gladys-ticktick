@@ -183,15 +183,37 @@ test('a poll resolving after a config change publishes nothing', async () => {
   assert.equal(gladys.calls.connectionStatuses.length, 1);
 });
 
-test('OAuth: the authorize URL needs the client credentials and carries a fresh state', async () => {
-  const { integration } = setup({ config: { client_id: 'cid' } });
+test('OAuth: the authorize URL needs the Client ID, logs a failure and carries a fresh state', async () => {
+  const warnings = [];
+  const logger = { ...silentLogger, warn: (message) => warnings.push(message) };
+  const { integration } = setup({ config: { client_secret: 'cs' }, deps: { logger } });
   await assert.rejects(integration.oauthAuthorizeUrl('ticktick_account', REDIRECT), /Client ID/);
+  // The SDK does not log a handler failure, and Gladys shows a generic error.
+  assert.match(warnings[0], /authorize URL.*Client ID/);
 
-  const ready = setup({ config: { client_id: 'cid', client_secret: 'cs' } });
+  // The secret is only needed for the code exchange.
+  const ready = setup({ config: { client_id: 'cid' } });
   const url = new URL(await ready.integration.oauthAuthorizeUrl('ticktick_account', REDIRECT));
   assert.equal(url.searchParams.get('state'), 'state-1');
   assert.equal(url.searchParams.get('client_id'), 'cid');
   assert.equal(url.searchParams.get('redirect_uri'), REDIRECT);
+});
+
+test('OAuth: the callback needs the Client secret', async () => {
+  const { integration, gladys } = setup({
+    config: { client_id: 'cid' },
+    deps: { exchangeCode: async () => 'tok' },
+  });
+  await integration.oauthAuthorizeUrl('ticktick_account', REDIRECT);
+  await assert.rejects(
+    integration.oauthCallback('ticktick_account', {
+      code: 'c',
+      state: 'state-1',
+      redirectUri: REDIRECT,
+    }),
+    /Client secret/,
+  );
+  assert.equal(gladys.calls.setConfigs.length, 0);
 });
 
 test('OAuth: the callback exchanges the code, stores the token and starts polling', async () => {

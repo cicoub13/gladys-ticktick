@@ -119,15 +119,16 @@ est supérieur à 0, envoyer « Aujourd'hui : {{titles}} » en notification.
 
 ## Dépannage
 
-| Message                                                         | Que faire                                                                                                                                                    |
-| --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| _Connectez votre compte TickTick, ou saisissez un jeton d'API…_ | Rien n'est encore connecté : suivez « Connecter votre compte ».                                                                                              |
-| _Saisissez le Client ID et le Client secret…_                   | Renseignez-les et **Enregistrez** avant de cliquer sur **Connecter**.                                                                                        |
-| _TickTick a refusé l'accès_                                     | L'accès a été révoqué ou a expiré, ou le jeton est faux : cliquez à nouveau sur **Connecter** (ou collez un nouveau jeton). L'actualisation attend d'ici là. |
-| _L'autorisation TickTick a expiré ou ne correspond pas_         | Plus de 15 minutes se sont écoulées sur la page TickTick, ou l'intégration a redémarré entre-temps : cliquez à nouveau sur **Connecter**.                    |
-| TickTick indique que l'URL de redirection est invalide          | L'**OAuth redirect URL** de votre application développeur doit être exactement l'URI de redirection affichée dans Gladys.                                    |
-| _TickTick est injoignable_ / _n'a pas répondu à temps_          | Vérifiez la connexion Internet de la machine Gladys. L'intégration réessaie à chaque actualisation.                                                          |
-| _TickTick limite le nombre de requêtes_                         | Choisissez une fréquence d'actualisation plus longue.                                                                                                        |
+| Message                                                         | Que faire                                                                                                                                                           |
+| --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| _Connectez votre compte TickTick, ou saisissez un jeton d'API…_ | Rien n'est encore connecté : suivez « Connecter votre compte ».                                                                                                     |
+| _Saisissez le Client ID…_ / _Saisissez le Client secret…_       | Renseignez-les et **Enregistrez** avant de cliquer sur **Connecter**.                                                                                               |
+| _Erreur au lancement de la connexion_ (affiché par Gladys)      | Gladys n'affiche pas la cause : elle est dans les journaux de l'intégration (« TickTick connection failed »). Le plus souvent, le Client ID n'a pas été enregistré. |
+| _TickTick a refusé l'accès_                                     | L'accès a été révoqué ou a expiré, ou le jeton est faux : cliquez à nouveau sur **Connecter** (ou collez un nouveau jeton). L'actualisation attend d'ici là.        |
+| _L'autorisation TickTick a expiré ou ne correspond pas_         | Plus de 15 minutes se sont écoulées sur la page TickTick, ou l'intégration a redémarré entre-temps : cliquez à nouveau sur **Connecter**.                           |
+| TickTick indique que l'URL de redirection est invalide          | L'**OAuth redirect URL** de votre application développeur doit être exactement l'URI de redirection affichée dans Gladys.                                           |
+| _TickTick est injoignable_ / _n'a pas répondu à temps_          | Vérifiez la connexion Internet de la machine Gladys. L'intégration réessaie à chaque actualisation.                                                                 |
+| _TickTick limite le nombre de requêtes_                         | Choisissez une fréquence d'actualisation plus longue.                                                                                                               |
 
 Les journaux de l'intégration (onglet Supervision de l'intégration) donnent le
 détail de chaque erreur ; votre jeton n'y apparaît jamais.
