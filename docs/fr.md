@@ -1,0 +1,133 @@
+# TickTick
+
+> **Nécessite Gladys 5.1 ou plus récent.** Cette intégration se compose d'un
+> widget de tableau de bord et de déclencheurs et d'actions de scène, arrivés
+> avec Gladys 5.1 : sur une version antérieure, elle ne peut pas être installée.
+
+Retrouvez vos tâches [TickTick](https://ticktick.com) dans Gladys : un widget
+de tableau de bord avec les tâches du jour et celles en retard, une action de
+scène pour créer une tâche (depuis un bouton, une commande vocale, un
+capteur…), une autre pour lire vos tâches à voix haute ou les envoyer en
+notification, et un déclencheur de scène qui part quand une tâche arrive à
+échéance.
+
+## Prérequis
+
+- Un compte TickTick (gratuit ou Premium).
+- Un accès Internet depuis la machine qui fait tourner Gladys : l'intégration
+  utilise l'API cloud de TickTick.
+
+## Connecter votre compte
+
+Deux possibilités, au choix.
+
+### Option 1 : application TickTick (recommandée)
+
+1. Ouvrez le [site développeur de TickTick](https://developer.ticktick.com/manage),
+   connectez-vous avec votre compte TickTick et cliquez sur **New App**. Le nom
+   n'a pas d'importance, par exemple « Gladys ».
+2. Ouvrez la nouvelle application et cliquez sur **Edit**. Dans **OAuth
+   redirect URL**, collez l'**URI de redirection** affichée dans l'écran de
+   configuration de Gladys, sous le bouton **Connecter** (en général
+   `https://my.gladysassistant.com/redirect/oauth`), puis enregistrez.
+3. Copiez le **Client ID** et le **Client secret** de l'application dans l'écran
+   de configuration de Gladys et cliquez sur **Enregistrer**.
+4. Cliquez sur **Connecter** : TickTick vous demande d'autoriser l'accès à vos
+   tâches. Acceptez. Vous revenez dans Gladys et le statut passe à connecté.
+
+L'accès accordé dure plusieurs mois. Quand TickTick y met fin, le statut de
+l'intégration l'indique : cliquez à nouveau sur **Connecter**.
+
+### Option 2 : jeton d'API personnel
+
+Si votre compte TickTick propose un jeton d'API personnel (**Paramètres >
+Compte > API Token** dans l'application web TickTick), collez-le dans **Jeton
+d'API personnel** et cliquez sur **Enregistrer**. Aucune application
+développeur n'est nécessaire.
+
+Si les deux sont renseignés, le compte connecté est utilisé en priorité, et le
+jeton prend le relais si TickTick refuse le compte.
+
+## Configuration
+
+| Champ                           | Description                                                                                                                            |
+| ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| **Client ID / secret**          | Ceux de votre application développeur TickTick (option 1).                                                                             |
+| **Compte TickTick**             | Le bouton **Connecter** (option 1).                                                                                                    |
+| **Jeton d'API personnel**       | Option 2.                                                                                                                              |
+| **Fréquence d'actualisation**   | Fréquence de lecture de TickTick : 1 minute, 5 minutes (par défaut) ou 15 minutes.                                                     |
+| **Heure des tâches sans heure** | Heure (0-23, 9 par défaut) à laquelle le déclencheur « Tâche TickTick à échéance » part pour une tâche qui a un jour mais pas d'heure. |
+
+**Tester la connexion** vérifie l'accès et indique le nombre de listes
+trouvées. Le bouton relance aussi l'actualisation après un accès refusé, une
+fois le problème corrigé.
+
+## Widget de tableau de bord
+
+Ajoutez le widget **Tâches TickTick** à un tableau de bord. Il affiche :
+
+- deux compteurs : tâches en retard et tâches du jour ;
+- jusqu'à 8 tâches, les retards d'abord, avec leur liste, leur échéance et leur
+  priorité. Touchez une tâche pour voir ses notes et un lien pour l'ouvrir dans
+  TickTick ;
+- une ligne indiquant combien d'autres tâches n'ont pas pu être affichées.
+
+Le réglage **Tâches affichées** de chaque widget permet de choisir entre
+_Aujourd'hui et en retard_ (par défaut), _Aujourd'hui_, _En retard_ et _7
+prochains jours et en retard_.
+
+Les tâches sans date ne sont jamais affichées. Les tâches se terminent dans
+TickTick, pas depuis le widget.
+
+## Scènes
+
+### Déclencheur : Tâche TickTick à échéance
+
+Se déclenche quand une tâche non terminée arrive à échéance : à son heure pour
+une tâche avec une heure, à l'**Heure des tâches sans heure** pour une tâche
+qui n'a qu'un jour. Filtres facultatifs : la **priorité**, et la **liste** (son
+nom exact, `Inbox` pour la boîte de réception).
+
+Variables pour les actions suivantes : `title`, `list_name`, `priority`
+(`none`, `low`, `medium`, `high`), `due_date` (`AAAA-MM-JJ`), `due_time`
+(`HH:MM`, vide pour une tâche sur la journée), `all_day` et `content` (les
+notes de la tâche).
+
+La planification suit l'actualisation : une tâche créée ou déplacée moins d'une
+période d'actualisation avant son échéance peut être manquée. Une tâche déjà
+échue au démarrage de Gladys ne déclenche rien.
+
+### Action : Créer une tâche TickTick
+
+- **Titre** (obligatoire, peut utiliser les variables de la scène) ;
+- **Liste** : nom d'une liste TickTick, sans tenir compte des majuscules. Vide
+  ou inconnue : la boîte de réception ;
+- **Échéance** : sans date, aujourd'hui ou demain, avec une **Heure
+  d'échéance** facultative (`18:30`) ; sans heure, la tâche porte sur la
+  journée ;
+- **Priorité** : aucune, basse, moyenne ou haute.
+
+Sorties : `task_id` et `list_name` (la liste où la tâche a été créée).
+
+### Action : Lister les tâches TickTick
+
+Lit les tâches d'une période (mêmes choix que le widget) depuis la dernière
+actualisation. Sorties : `count`, `titles` (une tâche par ligne, avec son heure
+si elle en a une), et pour la première tâche `next_title`, `next_list`,
+`next_due_date` et `next_due_time`. Exemple : chaque matin à 7 h 30, si `count`
+est supérieur à 0, envoyer « Aujourd'hui : {{titles}} » en notification.
+
+## Dépannage
+
+| Message                                                         | Que faire                                                                                                                                                    |
+| --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| _Connectez votre compte TickTick, ou saisissez un jeton d'API…_ | Rien n'est encore connecté : suivez « Connecter votre compte ».                                                                                              |
+| _Saisissez le Client ID et le Client secret…_                   | Renseignez-les et **Enregistrez** avant de cliquer sur **Connecter**.                                                                                        |
+| _TickTick a refusé l'accès_                                     | L'accès a été révoqué ou a expiré, ou le jeton est faux : cliquez à nouveau sur **Connecter** (ou collez un nouveau jeton). L'actualisation attend d'ici là. |
+| _L'autorisation TickTick a expiré ou ne correspond pas_         | Plus de 15 minutes se sont écoulées sur la page TickTick, ou l'intégration a redémarré entre-temps : cliquez à nouveau sur **Connecter**.                    |
+| TickTick indique que l'URL de redirection est invalide          | L'**OAuth redirect URL** de votre application développeur doit être exactement l'URI de redirection affichée dans Gladys.                                    |
+| _TickTick est injoignable_ / _n'a pas répondu à temps_          | Vérifiez la connexion Internet de la machine Gladys. L'intégration réessaie à chaque actualisation.                                                          |
+| _TickTick limite le nombre de requêtes_                         | Choisissez une fréquence d'actualisation plus longue.                                                                                                        |
+
+Les journaux de l'intégration (onglet Supervision de l'intégration) donnent le
+détail de chaque erreur ; votre jeton n'y apparaît jamais.

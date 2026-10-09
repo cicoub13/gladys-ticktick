@@ -1,0 +1,336 @@
+{
+  "manifest_version": 1,
+  "type": "provider",
+  "name": "TickTick",
+  "description": {
+    "en": "Shows your TickTick tasks on the dashboard and lets scenes create tasks or react to due ones.",
+    "fr": "Affiche vos tâches TickTick et permet aux scènes d'en créer ou de réagir à leurs échéances."
+  },
+  "version": "0.1.0",
+  "docker_image": "ghcr.io/cicoub13/gladys-ticktick:0.1.0",
+  "gladys_version": ">=5.1.0",
+  "categories": ["services"],
+  "transports": ["cloud"],
+  "config_schema": [
+    {
+      "key": "intro",
+      "type": "section",
+      "label": { "en": "Connect your TickTick account", "fr": "Connecter votre compte TickTick" },
+      "description": {
+        "en": "1. On the TickTick developer site, create an app (Manage Apps > New App). 2. In its settings, set the OAuth redirect URL to the redirect URI shown below the Connect button. 3. Copy its Client ID and Client secret here, save, then click Connect.",
+        "fr": "1. Sur le site développeur de TickTick, créez une application (Manage Apps > New App). 2. Dans ses réglages, indiquez comme OAuth redirect URL l'URI de redirection affichée sous le bouton Connecter. 3. Copiez ici son Client ID et son Client secret, enregistrez, puis cliquez sur Connecter."
+      },
+      "links": [
+        {
+          "url": "https://developer.ticktick.com/manage",
+          "label": { "en": "TickTick developer apps", "fr": "Applications développeur TickTick" }
+        }
+      ]
+    },
+    {
+      "key": "client_id",
+      "type": "string",
+      "label": { "en": "Client ID", "fr": "Client ID" },
+      "required": false
+    },
+    {
+      "key": "client_secret",
+      "type": "secret",
+      "label": { "en": "Client secret", "fr": "Client secret" },
+      "required": false
+    },
+    {
+      "key": "ticktick_account",
+      "type": "oauth2",
+      "label": { "en": "TickTick account", "fr": "Compte TickTick" }
+    },
+    {
+      "key": "api_token_intro",
+      "type": "section",
+      "label": {
+        "en": "Or use a personal API token",
+        "fr": "Ou utilisez un jeton d'API personnel"
+      },
+      "description": {
+        "en": "If your TickTick account offers an API token (Settings > Account > API Token), you can paste it here instead of creating an app. The connected account is used first when both are set.",
+        "fr": "Si votre compte TickTick propose un jeton d'API (Paramètres > Compte > API Token), vous pouvez le coller ici au lieu de créer une application. Le compte connecté est utilisé en priorité si les deux sont renseignés."
+      }
+    },
+    {
+      "key": "api_token",
+      "type": "secret",
+      "label": { "en": "Personal API token", "fr": "Jeton d'API personnel" },
+      "required": false
+    },
+    {
+      "key": "settings_intro",
+      "type": "section",
+      "label": { "en": "Settings", "fr": "Réglages" },
+      "description": {
+        "en": "How often TickTick is read, and when the \"Task due\" scene trigger fires for tasks without a time.",
+        "fr": "Fréquence de lecture de TickTick, et heure à laquelle le déclencheur « Tâche à échéance » part pour les tâches sans heure."
+      }
+    },
+    {
+      "key": "poll_frequency",
+      "type": "select",
+      "label": { "en": "Refresh frequency", "fr": "Fréquence d'actualisation" },
+      "required": false,
+      "default": "300",
+      "options": [
+        { "value": "60", "label": { "en": "1 minute", "fr": "1 minute" } },
+        { "value": "300", "label": { "en": "5 minutes", "fr": "5 minutes" } },
+        { "value": "900", "label": { "en": "15 minutes", "fr": "15 minutes" } }
+      ]
+    },
+    {
+      "key": "all_day_hour",
+      "type": "number",
+      "label": { "en": "Hour for all-day tasks", "fr": "Heure des tâches sans heure" },
+      "description": {
+        "en": "Hour of the day (0-23) at which the \"Task due\" trigger fires for an all-day task.",
+        "fr": "Heure de la journée (0-23) à laquelle le déclencheur « Tâche à échéance » part pour une tâche sur la journée."
+      },
+      "required": false,
+      "default": 9,
+      "min": 0,
+      "max": 23
+    }
+  ],
+  "actions": [
+    {
+      "key": "test_connection",
+      "label": { "en": "Test the connection", "fr": "Tester la connexion" },
+      "timeout_seconds": 20
+    }
+  ],
+  "widgets": [
+    {
+      "key": "tasks",
+      "label": { "en": "TickTick tasks", "fr": "Tâches TickTick" },
+      "description": {
+        "en": "Overdue and upcoming TickTick tasks, with their list and due time.",
+        "fr": "Tâches TickTick en retard et à venir, avec leur liste et leur échéance."
+      },
+      "icon": "check-square",
+      "settings": [
+        {
+          "key": "scope",
+          "type": "select",
+          "label": { "en": "Tasks shown", "fr": "Tâches affichées" },
+          "required": true,
+          "default": "today_and_overdue",
+          "options": [
+            {
+              "value": "today_and_overdue",
+              "label": { "en": "Today and overdue", "fr": "Aujourd'hui et en retard" }
+            },
+            { "value": "today", "label": { "en": "Today", "fr": "Aujourd'hui" } },
+            { "value": "overdue", "label": { "en": "Overdue", "fr": "En retard" } },
+            {
+              "value": "week",
+              "label": { "en": "Next 7 days and overdue", "fr": "7 prochains jours et en retard" }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "scene_triggers": [
+    {
+      "key": "task_due",
+      "label": { "en": "TickTick task due", "fr": "Tâche TickTick à échéance" },
+      "description": {
+        "en": "Fires when an undone task reaches its due time (all-day tasks: at the hour set in the configuration).",
+        "fr": "Se déclenche quand une tâche non terminée arrive à échéance (tâches sur la journée : à l'heure réglée dans la configuration)."
+      },
+      "fields": [
+        {
+          "key": "priority",
+          "type": "multi_select",
+          "label": { "en": "Priority", "fr": "Priorité" },
+          "required": false,
+          "options": [
+            { "value": "none", "label": { "en": "None", "fr": "Aucune" } },
+            { "value": "low", "label": { "en": "Low", "fr": "Basse" } },
+            { "value": "medium", "label": { "en": "Medium", "fr": "Moyenne" } },
+            { "value": "high", "label": { "en": "High", "fr": "Haute" } }
+          ]
+        },
+        {
+          "key": "list_name",
+          "type": "string",
+          "label": { "en": "List", "fr": "Liste" },
+          "description": {
+            "en": "Exact name of the TickTick list (\"Inbox\" for the inbox). Empty: every list.",
+            "fr": "Nom exact de la liste TickTick (« Inbox » pour la boîte de réception). Vide : toutes les listes."
+          },
+          "required": false
+        }
+      ],
+      "variables": [
+        { "key": "title", "type": "string", "label": { "en": "Title", "fr": "Titre" } },
+        { "key": "list_name", "type": "string", "label": { "en": "List", "fr": "Liste" } },
+        {
+          "key": "priority",
+          "type": "string",
+          "label": {
+            "en": "Priority (none, low, medium, high)",
+            "fr": "Priorité (none, low, medium, high)"
+          }
+        },
+        {
+          "key": "due_date",
+          "type": "string",
+          "label": { "en": "Due date (YYYY-MM-DD)", "fr": "Date d'échéance (AAAA-MM-JJ)" }
+        },
+        {
+          "key": "due_time",
+          "type": "string",
+          "label": { "en": "Due time (HH:MM)", "fr": "Heure d'échéance (HH:MM)" }
+        },
+        {
+          "key": "all_day",
+          "type": "boolean",
+          "label": { "en": "All-day task", "fr": "Tâche sur la journée" }
+        },
+        { "key": "content", "type": "string", "label": { "en": "Notes", "fr": "Notes" } }
+      ]
+    }
+  ],
+  "scene_actions": [
+    {
+      "key": "create_task",
+      "label": { "en": "Create a TickTick task", "fr": "Créer une tâche TickTick" },
+      "description": {
+        "en": "Adds a task to a TickTick list, optionally due today or tomorrow.",
+        "fr": "Ajoute une tâche à une liste TickTick, avec une échéance aujourd'hui ou demain si besoin."
+      },
+      "timeout_seconds": 20,
+      "fields": [
+        {
+          "key": "title",
+          "type": "string",
+          "label": { "en": "Title", "fr": "Titre" },
+          "required": true
+        },
+        {
+          "key": "list_name",
+          "type": "string",
+          "label": { "en": "List", "fr": "Liste" },
+          "description": {
+            "en": "Name of the TickTick list. Empty or unknown: the inbox.",
+            "fr": "Nom de la liste TickTick. Vide ou inconnue : la boîte de réception."
+          },
+          "required": false
+        },
+        {
+          "key": "due",
+          "type": "select",
+          "label": { "en": "Due", "fr": "Échéance" },
+          "required": false,
+          "default": "none",
+          "options": [
+            { "value": "none", "label": { "en": "No date", "fr": "Sans date" } },
+            { "value": "today", "label": { "en": "Today", "fr": "Aujourd'hui" } },
+            { "value": "tomorrow", "label": { "en": "Tomorrow", "fr": "Demain" } }
+          ]
+        },
+        {
+          "key": "due_time",
+          "type": "string",
+          "label": { "en": "Due time (HH:MM)", "fr": "Heure d'échéance (HH:MM)" },
+          "description": {
+            "en": "Optional. Empty: an all-day task.",
+            "fr": "Facultatif. Vide : une tâche sur la journée."
+          },
+          "placeholder": { "en": "18:30", "fr": "18:30" },
+          "required": false
+        },
+        {
+          "key": "priority",
+          "type": "select",
+          "label": { "en": "Priority", "fr": "Priorité" },
+          "required": false,
+          "default": "none",
+          "options": [
+            { "value": "none", "label": { "en": "None", "fr": "Aucune" } },
+            { "value": "low", "label": { "en": "Low", "fr": "Basse" } },
+            { "value": "medium", "label": { "en": "Medium", "fr": "Moyenne" } },
+            { "value": "high", "label": { "en": "High", "fr": "Haute" } }
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "key": "task_id",
+          "type": "string",
+          "label": { "en": "Task ID", "fr": "ID de la tâche" }
+        },
+        { "key": "list_name", "type": "string", "label": { "en": "List", "fr": "Liste" } }
+      ]
+    },
+    {
+      "key": "tasks_summary",
+      "label": { "en": "Get TickTick tasks", "fr": "Lister les tâches TickTick" },
+      "description": {
+        "en": "Counts and lists the tasks due today or overdue, e.g. for a morning notification.",
+        "fr": "Compte et liste les tâches du jour ou en retard, par exemple pour une notification le matin."
+      },
+      "timeout_seconds": 10,
+      "fields": [
+        {
+          "key": "scope",
+          "type": "select",
+          "label": { "en": "Tasks", "fr": "Tâches" },
+          "required": false,
+          "default": "today_and_overdue",
+          "options": [
+            {
+              "value": "today_and_overdue",
+              "label": { "en": "Today and overdue", "fr": "Aujourd'hui et en retard" }
+            },
+            { "value": "today", "label": { "en": "Today", "fr": "Aujourd'hui" } },
+            { "value": "overdue", "label": { "en": "Overdue", "fr": "En retard" } },
+            {
+              "value": "week",
+              "label": { "en": "Next 7 days and overdue", "fr": "7 prochains jours et en retard" }
+            }
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "key": "count",
+          "type": "number",
+          "label": { "en": "Number of tasks", "fr": "Nombre de tâches" }
+        },
+        {
+          "key": "titles",
+          "type": "string",
+          "label": { "en": "Task titles (one per line)", "fr": "Titres des tâches (un par ligne)" }
+        },
+        {
+          "key": "next_title",
+          "type": "string",
+          "label": { "en": "First task: title", "fr": "Première tâche : titre" }
+        },
+        {
+          "key": "next_list",
+          "type": "string",
+          "label": { "en": "First task: list", "fr": "Première tâche : liste" }
+        },
+        {
+          "key": "next_due_date",
+          "type": "string",
+          "label": { "en": "First task: due date", "fr": "Première tâche : date" }
+        },
+        {
+          "key": "next_due_time",
+          "type": "string",
+          "label": { "en": "First task: due time", "fr": "Première tâche : heure" }
+        }
+      ]
+    }
+  ]
+}
