@@ -7,7 +7,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, statSync } from 'node:fs';
 import { DEFAULT_CONFIG, OAUTH_TOKEN_KEY, POLL_FREQUENCY_OPTIONS } from '../src/config.js';
 import { OAUTH_FIELD_KEY } from '../src/oauth.js';
 import { TASKS_WIDGET_KEY } from '../src/widgets.js';
@@ -23,6 +23,7 @@ import { TASK_DUE_KEY, buildTaskDueEventData } from '../src/scene-events.js';
 import { PRIORITIES } from '../src/ticktick/snapshot.js';
 import { task } from './fixtures/ticktick.js';
 
+const MAX_COVER_BYTES = 150 * 1024;
 // The Gladys release that ships the provider type, the dashboard widgets and
 // the scene triggers/actions this integration is made of.
 const MIN_GLADYS_VERSION = '>=5.1.0';
@@ -236,4 +237,17 @@ test('widget labels fit the 3-30 characters the core accepts', () => {
       assert.ok(text.length >= 3 && text.length <= 30, `widget label "${text}"`);
     }
   }
+});
+
+test('the cover image points at a real 800x534 file within the store limit', () => {
+  assert.equal(
+    manifest.cover_image,
+    'https://raw.githubusercontent.com/cicoub13/gladys-ticktick/main/cover.png',
+  );
+  const url = new URL('../cover.png', import.meta.url);
+  const size = statSync(url).size;
+  assert.ok(size <= MAX_COVER_BYTES, `cover.png is ${size} bytes, over ${MAX_COVER_BYTES}`);
+  // PNG IHDR: width and height are the big-endian 32-bit integers at 16 and 20.
+  const header = readFileSync(url).subarray(0, 24);
+  assert.deepEqual([header.readUInt32BE(16), header.readUInt32BE(20)], [800, 534]);
 });
