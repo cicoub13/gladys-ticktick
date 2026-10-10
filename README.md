@@ -26,6 +26,24 @@ JavaScript SDK
 - Polling every 1, 5 or 15 minutes; the widget is only nudged when the tasks
   changed, and polling stops after a refused access until the user reconnects.
 
+## Screenshots
+
+The **TickTick tasks** widget on a dashboard, scope "Next 7 days and overdue":
+
+![The TickTick tasks widget on a Gladys dashboard](docs/images/widget.png)
+
+A Gladys scene started by the **TickTick task due** trigger, filtered on
+priority and list:
+
+![A Gladys scene triggered when an urgent TickTick task is due](docs/images/scene-trigger.png)
+
+The **Create a TickTick task** scene action:
+
+![A Gladys scene creating a TickTick task](docs/images/scene-action.png)
+
+_Captured on a Gladys 5.1 dashboard with a simulated TickTick account — tasks
+are illustrative._
+
 ## Install
 
 - **From Gladys**: install **TickTick** from the integration store (Gladys
