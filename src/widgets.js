@@ -7,7 +7,9 @@
 // failed. A row opens the core's detail panel with the task notes and a link
 // to the task in the TickTick web app.
 //
-// A card-list row cannot carry a button, so tasks are completed in TickTick
+// Once connected, an "Add task" button opens a form (title, due, priority,
+// list; Gladys >= 5.2.0) whose values come back through onWidgetAction. A
+// card-list row cannot carry a button, so tasks are completed in TickTick
 // (or by a scene), not from the widget. Texts are written in the viewer's
 // language and clipped to the vocabulary bounds, so the content reaches the
 // dashboard exactly as sent (validateWidgetContent reports nothing, see the
@@ -18,8 +20,11 @@
 import { WIDGET_COLORS } from '@gladysassistant/integration-sdk';
 import { DEFAULT_SCOPE, SCOPES, bucketOf, countTasks, selectTasks } from './tasks.js';
 import { dueText, listLabel, priorityLabel, resolveLanguage } from './localize.js';
+import { DUE_OPTIONS, PRIORITY_OPTIONS } from './scene-actions.js';
+import { INBOX_PROJECT_ID } from './ticktick/client.js';
 
 export const TASKS_WIDGET_KEY = 'tasks';
+export const ADD_TASK_ACTION = 'add_task';
 
 const TTL_SECONDS = 60;
 const MAX_ROWS = 8;
@@ -30,6 +35,32 @@ const CARD_SUBTITLE_MAX = 60;
 const CARD_DESCRIPTION_MAX = 2000;
 const CAPTION_MAX = 80;
 const BODY_MAX = 300;
+const OPTION_LABEL_MAX = 40;
+// Neither the SDK nor the core caps the options of a select field: this
+// keeps the list picker usable (the inbox, then the first 49 lists).
+const MAX_LIST_OPTIONS = 50;
+
+// Labels of the "Add task" form. Field and option labels must be
+// multi-language objects; the core shows the viewer's language.
+const FORM = {
+  title: { en: 'Title', fr: 'Titre' },
+  due: { en: 'Due', fr: 'Échéance' },
+  dueOptions: {
+    none: { en: 'No date', fr: 'Sans date' },
+    today: { en: 'Today', fr: "Aujourd'hui" },
+    tomorrow: { en: 'Tomorrow', fr: 'Demain' },
+  },
+  priority: { en: 'Priority', fr: 'Priorité' },
+  priorityOptions: {
+    none: { en: 'None', fr: 'Aucune' },
+    low: { en: 'Low', fr: 'Basse' },
+    medium: { en: 'Medium', fr: 'Moyenne' },
+    high: { en: 'High', fr: 'Haute' },
+  },
+  list: { en: 'List', fr: 'Liste' },
+  inbox: { en: 'Inbox', fr: 'Boîte de réception' },
+  untitled: { en: '(untitled)', fr: '(sans titre)' },
+};
 
 const PRIORITY_COLORS = {
   1: WIDGET_COLORS.INFO,
@@ -51,6 +82,7 @@ const TEXTS = {
       week: 'Nothing due this week.',
     },
     notConnected: 'Connect your TickTick account in the integration settings.',
+    addTask: 'Add task',
   },
   fr: {
     overdue: 'En retard',
@@ -65,6 +97,7 @@ const TEXTS = {
       week: 'Rien de prévu cette semaine.',
     },
     notConnected: "Connectez votre compte TickTick dans les paramètres de l'intégration.",
+    addTask: 'Ajouter une tâche',
   },
 };
 
@@ -100,6 +133,61 @@ function buildItem(task, language, now, timeZone) {
     item.description = clip(task.content, CARD_DESCRIPTION_MAX);
   }
   return item;
+}
+
+/**
+ * The "Add task" button: its form lists the inbox and the lists of the
+ * snapshot, by id (two lists may share a name).
+ * @param {{id: string, name: string}[]} projects - The open lists.
+ * @param {'en'|'fr'} language - Viewer language.
+ * @returns {object} The button component.
+ * @example
+ * buildAddTaskButton(snapshot.projects, 'en');
+ */
+export function buildAddTaskButton(projects, language) {
+  const listOptions = [
+    { value: INBOX_PROJECT_ID, label: FORM.inbox },
+    ...projects.map((project) => ({
+      value: project.id,
+      label: project.name ? { en: clip(project.name, OPTION_LABEL_MAX) } : FORM.untitled,
+    })),
+  ].slice(0, MAX_LIST_OPTIONS);
+  return {
+    type: 'button',
+    label: TEXTS[language].addTask,
+    icon: 'plus',
+    style: 'primary',
+    action: {
+      key: ADD_TASK_ACTION,
+      fields: [
+        { key: 'title', type: 'string', label: FORM.title, required: true },
+        {
+          key: 'due',
+          type: 'select',
+          label: FORM.due,
+          default: 'none',
+          options: DUE_OPTIONS.map((value) => ({ value, label: FORM.dueOptions[value] })),
+        },
+        {
+          key: 'priority',
+          type: 'select',
+          label: FORM.priority,
+          default: 'none',
+          options: Object.keys(PRIORITY_OPTIONS).map((value) => ({
+            value,
+            label: FORM.priorityOptions[value],
+          })),
+        },
+        {
+          key: 'list',
+          type: 'select',
+          label: FORM.list,
+          default: INBOX_PROJECT_ID,
+          options: listOptions,
+        },
+      ],
+    },
+  };
 }
 
 /**
@@ -178,5 +266,7 @@ export function buildTasksContent(
     // The tasks shown are those of the last successful poll: say why they may be stale.
     components.push(errorText);
   }
+  // 6 components at most with the button, within the budget of 8.
+  components.push(buildAddTaskButton(snapshot.projects ?? [], resolved));
   return { ttl_seconds: TTL_SECONDS, components };
 }

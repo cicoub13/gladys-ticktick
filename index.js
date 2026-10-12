@@ -39,6 +39,9 @@ gladys.onConfigUpdated(async (newConfig) => {
 
 // --- Dashboard widget --------------------------------------------------------
 gladys.onWidgetGet(TASKS_WIDGET_KEY, (options) => integration.widgetTasks(options));
+gladys.onWidgetAction(TASKS_WIDGET_KEY, (actionKey, params, options) =>
+  integration.widgetAction(actionKey, params, options),
+);
 
 // --- Scene actions -----------------------------------------------------------
 gladys.onSceneAction(CREATE_TASK_KEY, (fields) => integration.sceneCreateTask(fields));

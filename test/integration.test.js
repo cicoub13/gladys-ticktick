@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { TickTickIntegration, bilingual } from '../src/integration.js';
 import { TickTickError } from '../src/ticktick/client.js';
+import { createFakeGladys as createSdkFakeGladys } from '@gladysassistant/integration-sdk/testing';
 import { createFakeGladys } from './helpers/fakeGladys.js';
 import { task } from './fixtures/ticktick.js';
 
@@ -284,6 +285,137 @@ test('scene actions: create a task, then refresh; failures are readable', async 
   };
   await assert.rejects(integration.sceneCreateTask({ title: 'x' }), /limits the number/);
   await assert.rejects(integration.sceneCreateTask({ title: ' ' }), /empty/);
+});
+
+const formValues = (values = {}) => ({
+  values: { title: 'Buy bread', due: 'none', priority: 'none', list: 'inbox', ...values },
+});
+
+test('widget Add task: creates the task typed in the form, in the list picked by id', async () => {
+  const { integration, clients, calls } = setup();
+  await integration.applyConfig({ oauth_access_token: 'tp' });
+  const toast = await integration.widgetAction(
+    'add_task',
+    {},
+    formValues({ title: ' Buy bread ', due: 'tomorrow', priority: 'high', list: 'p-groceries' }),
+  );
+  assert.deepEqual(toast, {
+    en: 'Task added to Groceries.',
+    fr: 'Tâche ajoutée dans Groceries.',
+  });
+  assert.deepEqual(clients[0].created, [
+    {
+      title: 'Buy bread',
+      projectId: 'p-groceries',
+      priority: 5,
+      // Tomorrow, all day, in the local time zone (Europe/Paris).
+      startDate: '2026-10-09T22:00:00+0000',
+      dueDate: '2026-10-09T22:00:00+0000',
+      isAllDay: true,
+      timeZone: 'Europe/Paris',
+    },
+  ]);
+  // The new task shows up without waiting for the next period.
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(calls(), 2);
+});
+
+test('widget Add task: the inbox by default, and when the picked list is gone', async () => {
+  const { integration, clients } = setup();
+  await integration.applyConfig({ oauth_access_token: 'tp' });
+  const toast = await integration.widgetAction('add_task', {}, formValues());
+  assert.deepEqual(toast, {
+    en: 'Task added to Inbox.',
+    fr: 'Tâche ajoutée dans Boîte de réception.',
+  });
+  await integration.widgetAction('add_task', {}, formValues({ list: 'p-deleted' }));
+  assert.deepEqual(
+    clients[0].created.map((payload) => [payload.projectId, payload.priority, payload.dueDate]),
+    [
+      ['inbox1', 0, undefined],
+      ['inbox1', 0, undefined],
+    ],
+  );
+});
+
+test('widget Add task: no values (Gladys < 5.2.0) or an empty title create nothing', async () => {
+  const { integration, clients, calls } = setup();
+  await integration.applyConfig({ oauth_access_token: 'tp' });
+  const older = await integration.widgetAction('add_task', {}, { settings: {} });
+  assert.match(older.en, /needs Gladys 5\.2\.0/);
+  assert.match(older.fr, /nécessite Gladys 5\.2\.0/);
+  for (const title of ['', '   ', undefined]) {
+    const empty = await integration.widgetAction('add_task', {}, formValues({ title }));
+    assert.match(empty.en, /Enter a title/);
+  }
+  assert.deepEqual(clients[0].created, []);
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(calls(), 1);
+});
+
+test('widget Add task: a TickTick failure or a missing account is a readable failure', async () => {
+  const { integration, clients } = setup();
+  await assert.rejects(integration.widgetAction('add_task', {}, formValues()), /Connect your/);
+  await integration.applyConfig({ oauth_access_token: 'tp' });
+  clients[0].createTask = async () => {
+    throw authError();
+  };
+  await assert.rejects(
+    integration.widgetAction('add_task', {}, formValues()),
+    /TickTick refused the access.* \/ TickTick a refusé/,
+  );
+  clients[0].createTask = async () => {
+    throw new Error('boom');
+  };
+  await assert.rejects(integration.widgetAction('add_task', {}, formValues()), /boom/);
+  await assert.rejects(integration.widgetAction('mark_done', {}, formValues()), /Unknown/);
+});
+
+test('widget Add task through the SDK: toast on success, failed ack on error', async () => {
+  const gladys = createSdkFakeGladys();
+  const created = [];
+  const client = {
+    async createTask(payload) {
+      created.push(payload);
+      return { id: 'new-id' };
+    },
+  };
+  const integration = new TickTickIntegration(gladys, {
+    createClient: () => client,
+    fetchSnapshot: async () => snapshotOf(),
+    logger: silentLogger,
+    now: () => NOW,
+    setTimer: () => 0,
+    clearTimer: () => {},
+  });
+  gladys.onWidgetGet('tasks', (options) => integration.widgetTasks(options));
+  gladys.onWidgetAction('tasks', (actionKey, params, options) =>
+    integration.widgetAction(actionKey, params, options),
+  );
+  await integration.applyConfig({ oauth_access_token: 'tp' });
+
+  const got = await gladys.fake.widgetGet('tasks', { settings: {}, language: 'en' });
+  const button = got.data.content.components.at(-1);
+  assert.equal(button.action.key, 'add_task');
+
+  const ok = await gladys.fake.widgetAction('tasks', 'add_task', {}, formValues({ title: 'Milk' }));
+  assert.deepEqual(ok, {
+    success: true,
+    data: { message: { en: 'Task added to Inbox.', fr: 'Tâche ajoutée dans Boîte de réception.' } },
+  });
+  assert.equal(created[0].title, 'Milk');
+
+  const older = await gladys.fake.widgetAction('tasks', 'add_task', {}, { settings: {} });
+  assert.equal(older.success, true);
+  assert.match(older.data.message.en, /needs Gladys 5\.2\.0/);
+  assert.equal(created.length, 1);
+
+  client.createTask = async () => {
+    throw new TickTickError('rate_limited', 'x', { status: 429 });
+  };
+  const failed = await gladys.fake.widgetAction('tasks', 'add_task', {}, formValues());
+  assert.equal(failed.success, false);
+  assert.match(failed.error, /limits the number/);
 });
 
 test('the widget and the summary read the last snapshot', async () => {

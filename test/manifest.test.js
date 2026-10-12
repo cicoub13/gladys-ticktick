@@ -10,7 +10,7 @@ import assert from 'node:assert/strict';
 import { readFileSync, statSync } from 'node:fs';
 import { DEFAULT_CONFIG, OAUTH_TOKEN_KEY, POLL_FREQUENCY_OPTIONS } from '../src/config.js';
 import { OAUTH_FIELD_KEY } from '../src/oauth.js';
-import { TASKS_WIDGET_KEY } from '../src/widgets.js';
+import { TASKS_WIDGET_KEY, buildAddTaskButton } from '../src/widgets.js';
 import { SCOPES, DEFAULT_SCOPE } from '../src/tasks.js';
 import {
   CREATE_TASK_KEY,
@@ -24,9 +24,10 @@ import { PRIORITIES } from '../src/ticktick/snapshot.js';
 import { task } from './fixtures/ticktick.js';
 
 const MAX_COVER_BYTES = 150 * 1024;
-// The Gladys release that ships the provider type, the dashboard widgets and
-// the scene triggers/actions this integration is made of.
-const MIN_GLADYS_VERSION = '>=5.1.0';
+// The Gladys release that ships the provider type, the dashboard widgets,
+// the scene triggers/actions this integration is made of, and the forms
+// behind widget buttons (5.2.0).
+const MIN_GLADYS_VERSION = '>=5.2.0';
 // INTEGRATION_CATALOG_CATEGORIES in the core. The manifest schema has no enum
 // (an unknown key is dropped with a warning), so a typo here would silently
 // land the integration in the uncategorized bucket.
@@ -154,6 +155,7 @@ test('the widget, trigger, scene action and action keys are the ones the code re
 test('index.js registers a handler for every declared widget, scene action, action and OAuth step', () => {
   const index = readFileSync(new URL('../index.js', import.meta.url), 'utf8');
   assert.match(index, /onWidgetGet\(TASKS_WIDGET_KEY/);
+  assert.match(index, /onWidgetAction\(TASKS_WIDGET_KEY/);
   assert.match(index, /onSceneAction\(CREATE_TASK_KEY/);
   assert.match(index, /onSceneAction\(TASKS_SUMMARY_KEY/);
   assert.match(index, /onAction\('test_connection'/);
@@ -184,6 +186,17 @@ test('the create_task options are the ones the code reads', () => {
     sceneAction(CREATE_TASK_KEY).outputs.map((output) => output.key),
     ['task_id', 'list_name'],
   );
+});
+
+test('the widget Add task form offers the create_task due and priority choices, same labels', () => {
+  const formFields = buildAddTaskButton([], 'en').action.fields;
+  for (const key of ['title', 'due', 'priority']) {
+    const formField = formFields.find((entry) => entry.key === key);
+    const sceneField = sceneAction(CREATE_TASK_KEY).fields.find((entry) => entry.key === key);
+    assert.deepEqual(formField.label, sceneField.label, key);
+    assert.deepEqual(formField.options, sceneField.options, key);
+    assert.equal(formField.default, sceneField.default, key);
+  }
 });
 
 test('the task_due trigger declares exactly the keys the event carries', () => {

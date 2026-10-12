@@ -1,8 +1,9 @@
 # TickTick
 
-> **Requires Gladys 5.1 or later.** This integration is made of a dashboard
-> widget and scene triggers and actions, which ship with Gladys 5.1; on an
-> earlier version it cannot be installed.
+> **Requires Gladys 5.2 or later.** This integration is made of a dashboard
+> widget and scene triggers and actions, which ship with Gladys 5.1, and its
+> widget's **Add task** form needs Gladys 5.2; on an earlier version it cannot
+> be installed.
 
 Bring your [TickTick](https://ticktick.com) tasks into Gladys: a dashboard
 widget with the tasks due today and the overdue ones, a scene action to create
@@ -55,7 +56,21 @@ Add the **TickTick tasks** widget to a dashboard. It shows:
 - two counters: overdue tasks and tasks due today;
 - up to 8 tasks, overdue first, with their list, due time and priority. Tap a
   task to see its notes and a link to open it in TickTick;
-- a line saying how many more tasks did not fit.
+- a line saying how many more tasks did not fit;
+- an **Add task** button, once your account is connected.
+
+**Add task** opens a form:
+
+- **Title** (required);
+- **Due**: no date (default), today or tomorrow. The task is for the whole
+  day;
+- **Priority**: none (default), low, medium or high;
+- **List**: the inbox (default) or one of your TickTick lists (the first 49).
+
+The task is created in TickTick right away, a message confirms the list it
+landed in, and the widget shows it a moment later. If the list was deleted in
+the meantime, the task goes to the inbox. When TickTick refuses the request,
+the error is shown instead and nothing is created.
 
 The **Tasks shown** setting of each widget chooses between _Today and
 overdue_ (default), _Today_, _Overdue_ and _Next 7 days and overdue_.

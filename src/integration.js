@@ -12,12 +12,13 @@
 import { randomUUID } from 'node:crypto';
 import { logger as defaultLogger } from '@gladysassistant/integration-sdk';
 import { OAUTH_TOKEN_KEY, normalizeConfig } from './config.js';
-import { TickTickClient, describeError } from './ticktick/client.js';
+import { INBOX_PROJECT_ID, TickTickClient, describeError } from './ticktick/client.js';
 import { fetchSnapshot as defaultFetchSnapshot } from './ticktick/snapshot.js';
 import { buildAuthorizeUrl, exchangeCode as defaultExchangeCode } from './oauth.js';
 import { Poller } from './poller.js';
-import { TASKS_WIDGET_KEY, buildTasksContent } from './widgets.js';
-import { buildTasksSummary, runCreateTask } from './scene-actions.js';
+import { ADD_TASK_ACTION, TASKS_WIDGET_KEY, buildTasksContent } from './widgets.js';
+import { buildTaskIn, buildTasksSummary, runCreateTask } from './scene-actions.js';
+import { listLabel } from './localize.js';
 import { TASK_DUE_KEY, TaskDueScheduler, buildTaskDueEventData } from './scene-events.js';
 
 // How long the user has to consent at TickTick after clicking "Connect".
@@ -44,6 +45,23 @@ const OAUTH_STATE_MISMATCH = {
   en: 'The TickTick authorization expired or does not match. Click Connect again.',
   fr: "L'autorisation TickTick a expiré ou ne correspond pas. Cliquez à nouveau sur Connecter.",
 };
+
+// Toasts of the widget "Add task" form. A Gladys older than 5.2.0 drops the
+// form and runs the action without its values.
+const FORM_NEEDS_GLADYS_5_2 = {
+  en: 'Adding a task from the widget needs Gladys 5.2.0 or later. Nothing was created.',
+  fr: "L'ajout d'une tâche depuis le widget nécessite Gladys 5.2.0 ou plus récent. Rien n'a été créé.",
+};
+
+const EMPTY_TITLE = {
+  en: 'Enter a title to add a task. Nothing was created.',
+  fr: "Saisissez un titre pour ajouter une tâche. Rien n'a été créé.",
+};
+
+const TOAST_LIST_MAX = 60;
+
+const clipList = (name) =>
+  name.length <= TOAST_LIST_MAX ? name : `${name.slice(0, TOAST_LIST_MAX - 1)}…`;
 
 /**
  * Flatten a { en, fr } message into one string, for the places that only take
@@ -383,6 +401,47 @@ export class TickTickIntegration {
       error: this.lastError,
       now: this.now(),
     });
+  }
+
+  /**
+   * Widget button `add_task`: creates the task typed in its form, in the list
+   * picked by id (the inbox when it no longer exists). Missing values or an
+   * empty title create nothing and say why; a failure throws, like the scene
+   * action, and the SDK acks it as failed.
+   * @param {string} actionKey - The tapped action.
+   * @param {Record<string, unknown>} _params - Declared params (none).
+   * @param {{values?: Record<string, unknown>}} [options] - The form values, validated by the core.
+   * @returns {Promise<{en: string, fr: string}>} The toast.
+   */
+  async widgetAction(actionKey, _params, { values } = {}) {
+    if (actionKey !== ADD_TASK_ACTION) {
+      throw new Error(`Unknown widget action "${actionKey}"`);
+    }
+    if (!values) {
+      return FORM_NEEDS_GLADYS_5_2;
+    }
+    if (typeof values.title !== 'string' || values.title.trim() === '') {
+      return EMPTY_TITLE;
+    }
+    const client = this.requireClient();
+    const project = this.snapshot?.projects.find((entry) => entry.id === values.list);
+    const inboxId = this.snapshot?.inboxId ?? INBOX_PROJECT_ID;
+    const { task } = buildTaskIn(values, project, inboxId, this.now());
+    try {
+      await client.createTask(task);
+    } catch (err) {
+      if (err?.name === 'TickTickError') {
+        throw new Error(bilingual(describeError(err)), { cause: err });
+      }
+      throw err;
+    }
+    // Show the new task on the dashboard without waiting for the next period.
+    this.poller?.refreshNow().catch(() => {});
+    const list = (language) => clipList(listLabel({ listName: project?.name }, language));
+    return {
+      en: `Task added to ${list('en')}.`,
+      fr: `Tâche ajoutée dans ${list('fr')}.`,
+    };
   }
 
   /** Scene action `create_task`. */
