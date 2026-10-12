@@ -39,14 +39,31 @@ const TIME_PATTERN = /^([01]?\d|2[0-3])[:hH]([0-5]\d)$/;
  * buildNewTask({ title: 'Take the bins out', due: 'today', due_time: '19:00' }, projects, 'inbox', new Date());
  */
 export function buildNewTask(fields, projects, inboxId, now, timeZone) {
+  const wanted = typeof fields?.list_name === 'string' ? fields.list_name.trim().toLowerCase() : '';
+  const project = wanted
+    ? projects.find((entry) => entry.name.toLowerCase() === wanted)
+    : undefined;
+  return buildTaskIn(fields, project, inboxId, now, timeZone);
+}
+
+/**
+ * Build a TickTick task for a list already resolved: the part shared by the
+ * `create_task` scene action (list found by name) and the widget form (list
+ * picked by id).
+ * @param {object} fields - `title`, and optionally `due`, `due_time`, `priority`.
+ * @param {{id: string, name: string}|undefined} project - The list, undefined for the inbox.
+ * @param {string} inboxId - Id of the inbox.
+ * @param {Date} now - Reference instant.
+ * @param {string} [timeZone] - IANA time zone, for tests (defaults to TZ).
+ * @returns {{task: object, listName: string}} The API payload and the list name.
+ * @example
+ * buildTaskIn({ title: 'Buy milk', due: 'today' }, { id: 'p1', name: 'Groceries' }, 'inbox', new Date());
+ */
+export function buildTaskIn(fields, project, inboxId, now, timeZone) {
   const title = typeof fields?.title === 'string' ? fields.title.trim() : '';
   if (title === '') {
     throw new Error('The task title is empty / Le titre de la tâche est vide');
   }
-  const wanted = typeof fields.list_name === 'string' ? fields.list_name.trim().toLowerCase() : '';
-  const project = wanted
-    ? projects.find((entry) => entry.name.toLowerCase() === wanted)
-    : undefined;
 
   const task = {
     title: title.slice(0, TITLE_MAX),

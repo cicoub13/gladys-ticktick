@@ -1,8 +1,10 @@
 # TickTick
 
-> **Nécessite Gladys 5.1 ou plus récent.** Cette intégration se compose d'un
+> **Nécessite Gladys 5.2 ou plus récent.** Cette intégration se compose d'un
 > widget de tableau de bord et de déclencheurs et d'actions de scène, arrivés
-> avec Gladys 5.1 : sur une version antérieure, elle ne peut pas être installée.
+> avec Gladys 5.1, et le formulaire **Ajouter une tâche** de son widget
+> nécessite Gladys 5.2 : sur une version antérieure, elle ne peut pas être
+> installée.
 
 Retrouvez vos tâches [TickTick](https://ticktick.com) dans Gladys : un widget
 de tableau de bord avec les tâches du jour et celles en retard, une action de
@@ -60,7 +62,23 @@ Ajoutez le widget **Tâches TickTick** à un tableau de bord. Il affiche :
 - jusqu'à 8 tâches, les retards d'abord, avec leur liste, leur échéance et leur
   priorité. Touchez une tâche pour voir ses notes et un lien pour l'ouvrir dans
   TickTick ;
-- une ligne indiquant combien d'autres tâches n'ont pas pu être affichées.
+- une ligne indiquant combien d'autres tâches n'ont pas pu être affichées ;
+- un bouton **Ajouter une tâche**, une fois votre compte connecté.
+
+**Ajouter une tâche** ouvre un formulaire :
+
+- **Titre** (obligatoire) ;
+- **Échéance** : sans date (par défaut), aujourd'hui ou demain. La tâche est
+  sur la journée ;
+- **Priorité** : aucune (par défaut), basse, moyenne ou haute ;
+- **Liste** : la boîte de réception (par défaut) ou l'une de vos listes
+  TickTick (les 49 premières).
+
+La tâche est créée tout de suite dans TickTick, un message confirme la liste
+où elle a été ajoutée, et le widget l'affiche quelques instants plus tard. Si
+la liste a été supprimée entre-temps, la tâche va dans la boîte de réception.
+Quand TickTick refuse la demande, l'erreur s'affiche à la place et rien n'est
+créé.
 
 Le réglage **Tâches affichées** de chaque widget permet de choisir entre
 _Aujourd'hui et en retard_ (par défaut), _Aujourd'hui_, _En retard_ et _7

@@ -7,8 +7,9 @@ Built as an external integration running in its own container, on the
 JavaScript SDK
 [`@gladysassistant/integration-sdk`](https://github.com/GladysAssistant/integration-sdk-js).
 
-> **Requires Gladys ≥ 5.1.0** (provider integrations, dashboard widgets and
-> scene triggers/actions). `gladys_version` in the manifest declares that floor.
+> **Requires Gladys ≥ 5.2.0** (provider integrations, dashboard widgets and
+> scene triggers/actions since 5.1.0, forms behind widget buttons since
+> 5.2.0). `gladys_version` in the manifest declares that floor.
 
 ## Features
 
@@ -16,7 +17,8 @@ JavaScript SDK
   **Connect** button of Gladys.
 - **TickTick tasks** widget: overdue / today counters and up to 8 tasks with
   their list, due time, priority, notes and a link to TickTick. Scope per
-  widget: today and overdue, today, overdue, next 7 days.
+  widget: today and overdue, today, overdue, next 7 days. An **Add task**
+  button opens a form (title, due today or tomorrow, priority, list).
 - **TickTick task due** scene trigger, at the due time of a task (or at a
   configurable hour for all-day tasks), filterable by priority and list.
 - **Create a TickTick task** scene action: title, list (by name, inbox by
@@ -110,7 +112,7 @@ widget content it sends.
 │  ├─ oauth.js                       # TickTick authorize URL and code exchange
 │  ├─ poller.js                      # self-scheduling polling loop with refresh-after-command
 │  ├─ tasks.js                       # overdue / today / week selection and order
-│  ├─ widgets.js                     # tasks widget content
+│  ├─ widgets.js                     # tasks widget content and its Add task form
 │  ├─ scene-actions.js               # create_task and tasks_summary scene actions
 │  ├─ scene-events.js                # task_due trigger: timers and event payload
 │  ├─ localize.js                    # widget texts (en, fr) and language-neutral scene values

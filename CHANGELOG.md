@@ -4,6 +4,12 @@ All notable changes to the TickTick integration for Gladys Assistant.
 
 ## [Unreleased]
 
+### Added
+
+- An **Add task** button on the "TickTick tasks" widget: type a title, pick
+  a due day (today or tomorrow), a priority and a list, and the task is
+  created in TickTick. Gladys 5.2.0 or later is now required.
+
 ## [0.1.1] - 2026-10-09
 
 ### Added
