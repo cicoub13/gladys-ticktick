@@ -4,6 +4,8 @@ All notable changes to the TickTick integration for Gladys Assistant.
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-13
+
 ### Added
 
 - An **Add task** button on the "TickTick tasks" widget: type a title, pick
