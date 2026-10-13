@@ -2,8 +2,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { TickTickIntegration, bilingual } from '../src/integration.js';
 import { TickTickError } from '../src/ticktick/client.js';
-import { createFakeGladys as createSdkFakeGladys } from '@gladysassistant/integration-sdk/testing';
-import { createFakeGladys } from './helpers/fakeGladys.js';
+import { GladysApiError } from '@gladysassistant/integration-sdk';
+import { createFakeGladys } from '@gladysassistant/integration-sdk/testing';
 import { task } from './fixtures/ticktick.js';
 
 process.env.TZ = 'Europe/Paris';
@@ -20,11 +20,13 @@ const snapshotOf = (tasks = [task()]) => ({
 });
 
 /**
- * An integration on a fake Gladys. `outcomes` scripts fetchSnapshot: a
+ * An integration on the SDK fake Gladys. `outcomes` scripts fetchSnapshot: a
  * snapshot to resolve or an Error to throw, one per call (the last one repeats).
+ * Connected first: the SDK drops a widget refresh nudge while disconnected.
  */
-function setup({ config = {}, outcomes = [snapshotOf()], deps = {} } = {}) {
-  const gladys = createFakeGladys(config);
+async function setup({ config = {}, outcomes = [snapshotOf()], deps = {} } = {}) {
+  const gladys = createFakeGladys({ config });
+  await gladys.connect();
   const timers = [];
   const clients = [];
   let call = 0;
@@ -67,25 +69,28 @@ function setup({ config = {}, outcomes = [snapshotOf()], deps = {} } = {}) {
 
 const authError = () => new TickTickError('auth', 'refused', { status: 401 });
 
+/** The setConfig calls Gladys received (POST /config bodies). */
+const configWrites = (gladys) => gladys.fake.bodies('POST', '/config');
+
 test('without any token the integration asks to connect and does not poll', async () => {
-  const { gladys, integration, calls } = setup({ config: {} });
+  const { gladys, integration, calls } = await setup({ config: {} });
   await integration.applyConfig({});
   assert.equal(calls(), 0);
-  assert.equal(gladys.calls.connectionStatuses.length, 1);
-  assert.equal(gladys.calls.connectionStatuses[0].connected, false);
-  assert.match(gladys.calls.connectionStatuses[0].message.en, /Connect your TickTick account/);
-  assert.deepEqual(gladys.calls.widgetRefreshes, ['tasks']);
+  assert.equal(gladys.fake.connectionStatuses.length, 1);
+  assert.equal(gladys.fake.connectionStatuses[0].connected, false);
+  assert.match(gladys.fake.connectionStatuses[0].message.en, /Connect your TickTick account/);
+  assert.deepEqual(gladys.fake.widgetRefreshes, ['tasks']);
   assert.throws(() => integration.sceneTasksSummary({}), /Connect your TickTick/);
   await assert.rejects(integration.testConnection(), /Connect your TickTick/);
   assert.match(integration.widgetTasks({ language: 'en' }).components[0].text, /Connect/);
 });
 
 test('a successful poll reports the connection, nudges the widget and schedules the trigger', async () => {
-  const { gladys, integration, timers, clients } = setup();
+  const { gladys, integration, timers, clients } = await setup();
   await integration.applyConfig({ oauth_access_token: 'tp', poll_frequency: '60' });
   assert.equal(clients[0].token, 'tp');
-  assert.deepEqual(gladys.calls.connectionStatuses, [{ connected: true, message: undefined }]);
-  assert.deepEqual(gladys.calls.widgetRefreshes, ['tasks']);
+  assert.deepEqual(gladys.fake.connectionStatuses, [{ connected: true }]);
+  assert.deepEqual(gladys.fake.widgetRefreshes, ['tasks']);
   // The trigger timer (task due at 14:00, in 4 h) and the next poll (60 s).
   assert.deepEqual(
     timers.map(({ delay }) => delay),
@@ -94,49 +99,49 @@ test('a successful poll reports the connection, nudges the widget and schedules 
 
   // Same tasks: no new nudge, no new status.
   await integration.poll();
-  assert.equal(gladys.calls.widgetRefreshes.length, 1);
-  assert.equal(gladys.calls.connectionStatuses.length, 1);
+  assert.equal(gladys.fake.widgetRefreshes.length, 1);
+  assert.equal(gladys.fake.connectionStatuses.length, 1);
 
   // The trigger fires a scene event.
   await timers[0].fn();
-  assert.equal(gladys.calls.sceneEvents.length, 1);
-  assert.equal(gladys.calls.sceneEvents[0].key, 'task_due');
-  assert.equal(gladys.calls.sceneEvents[0].data.title, 'Buy milk');
+  assert.equal(gladys.fake.sceneEvents.length, 1);
+  assert.equal(gladys.fake.sceneEvents[0].key, 'task_due');
+  assert.equal(gladys.fake.sceneEvents[0].data.title, 'Buy milk');
 });
 
 test('a TickTick outage is reported once, shown in the widget, and polling goes on', async () => {
   const outage = new TickTickError('unreachable', 'down');
-  const { gladys, integration, timers } = setup({
+  const { gladys, integration, timers } = await setup({
     outcomes: [outage, outage, snapshotOf()],
   });
   await integration.applyConfig({ oauth_access_token: 'tp' });
   await integration.poll();
-  assert.equal(gladys.calls.connectionStatuses.length, 1);
-  assert.equal(gladys.calls.connectionStatuses[0].connected, false);
+  assert.equal(gladys.fake.connectionStatuses.length, 1);
+  assert.equal(gladys.fake.connectionStatuses[0].connected, false);
   assert.match(integration.widgetTasks({}).components[0].text, /cannot be reached/);
   assert.equal(timers.length, 1);
   assert.throws(() => integration.sceneTasksSummary({}), /cannot be reached/);
 
   await integration.poll();
-  assert.equal(gladys.calls.connectionStatuses.at(-1).connected, true);
+  assert.equal(gladys.fake.connectionStatuses.at(-1).connected, true);
   assert.equal(integration.sceneTasksSummary({}).count, 1);
 });
 
 test('a refused token suspends polling until a successful test', async () => {
-  const { gladys, integration, timers } = setup({ outcomes: [authError(), snapshotOf()] });
+  const { gladys, integration, timers } = await setup({ outcomes: [authError(), snapshotOf()] });
   await integration.applyConfig({ oauth_access_token: 'tp' });
   assert.equal(timers.length, 0);
-  assert.match(gladys.calls.connectionStatuses[0].message.fr, /suspendues/);
+  assert.match(gladys.fake.connectionStatuses[0].message.fr, /suspendues/);
   assert.equal(integration.poller.stopped, true);
 
   const message = await integration.testConnection();
   assert.match(message.en, /Connected to TickTick \(1 lists/);
   await new Promise((resolve) => setImmediate(resolve));
-  assert.equal(gladys.calls.connectionStatuses.at(-1).connected, true);
+  assert.equal(gladys.fake.connectionStatuses.at(-1).connected, true);
 });
 
 test('testConnection reports a TickTick failure in both languages', async () => {
-  const { integration, clients } = setup();
+  const { integration, clients } = await setup();
   await integration.applyConfig({ oauth_access_token: 'tp' });
   clients[0].listProjects = async () => {
     throw authError();
@@ -144,18 +149,29 @@ test('testConnection reports a TickTick failure in both languages', async () => 
   await assert.rejects(integration.testConnection(), /refused the access.*\/.*refusé/);
 });
 
-test('Gladys-side failures during a poll are only logged', async () => {
-  const { gladys, integration } = setup();
-  gladys.failNext('setConnectionStatus', 1);
-  gladys.failNext('requestWidgetRefresh', 1);
+test('Gladys-side failures during a poll are only logged', async (t) => {
+  const { gladys, integration } = await setup();
+  const tooManyRequests = async () => {
+    throw new GladysApiError(429, 'TOO_MANY_REQUESTS', 'Too Many Requests');
+  };
+  t.mock.method(gladys, 'setConnectionStatus', tooManyRequests, { times: 1 });
+  t.mock.method(
+    gladys,
+    'requestWidgetRefresh',
+    () => {
+      throw new Error('refresh failed');
+    },
+    { times: 1 },
+  );
   await integration.applyConfig({ oauth_access_token: 'tp' });
-  assert.equal(gladys.calls.connectionStatuses.length, 0);
+  assert.equal(gladys.fake.connectionStatuses.length, 0);
+  assert.equal(gladys.fake.widgetRefreshes.length, 0);
   await integration.poll();
-  assert.equal(gladys.calls.connectionStatuses.length, 1);
+  assert.equal(gladys.fake.connectionStatuses.length, 1);
 
-  gladys.failNext('publishSceneEvent', 1);
+  t.mock.method(gladys, 'publishSceneEvent', tooManyRequests, { times: 1 });
   await integration.fireTaskDue(task());
-  assert.equal(gladys.calls.sceneEvents.length, 0);
+  assert.equal(gladys.fake.sceneEvents.length, 0);
 });
 
 test('a poll resolving after a config change publishes nothing', async () => {
@@ -163,25 +179,25 @@ test('a poll resolving after a config change publishes nothing', async () => {
   const pending = new Promise((resolve) => {
     release = resolve;
   });
-  const { gladys, integration } = setup({ outcomes: [() => pending, snapshotOf([])] });
+  const { gladys, integration } = await setup({ outcomes: [() => pending, snapshotOf([])] });
   const first = integration.applyConfig({ oauth_access_token: 'old' });
   await integration.applyConfig({ oauth_access_token: 'new' });
   release(snapshotOf());
   await first;
   assert.equal(integration.snapshot.tasks.length, 0);
-  assert.equal(gladys.calls.connectionStatuses.length, 1);
+  assert.equal(gladys.fake.connectionStatuses.length, 1);
 });
 
 test('OAuth: the authorize URL needs the Client ID, logs a failure and carries a fresh state', async () => {
   const warnings = [];
   const logger = { ...silentLogger, warn: (message) => warnings.push(message) };
-  const { integration } = setup({ config: { client_secret: 'cs' }, deps: { logger } });
+  const { integration } = await setup({ config: { client_secret: 'cs' }, deps: { logger } });
   await assert.rejects(integration.oauthAuthorizeUrl('ticktick_account', REDIRECT), /Client ID/);
   // The SDK does not log a handler failure, and Gladys shows a generic error.
   assert.match(warnings[0], /authorize URL.*Client ID/);
 
   // The secret is only needed for the code exchange.
-  const ready = setup({ config: { client_id: 'cid' } });
+  const ready = await setup({ config: { client_id: 'cid' } });
   const url = new URL(await ready.integration.oauthAuthorizeUrl('ticktick_account', REDIRECT));
   assert.equal(url.searchParams.get('state'), 'state-1');
   assert.equal(url.searchParams.get('client_id'), 'cid');
@@ -189,7 +205,7 @@ test('OAuth: the authorize URL needs the Client ID, logs a failure and carries a
 });
 
 test('OAuth: the callback needs the Client secret', async () => {
-  const { integration, gladys } = setup({
+  const { integration, gladys } = await setup({
     config: { client_id: 'cid' },
     deps: { exchangeCode: async () => 'tok' },
   });
@@ -202,12 +218,12 @@ test('OAuth: the callback needs the Client secret', async () => {
     }),
     /Client secret/,
   );
-  assert.equal(gladys.calls.setConfigs.length, 0);
+  assert.deepEqual(configWrites(gladys), []);
 });
 
 test('OAuth: the callback exchanges the code, stores the token and starts polling', async () => {
   const exchanges = [];
-  const { gladys, integration, clients } = setup({
+  const { gladys, integration, clients } = await setup({
     config: { client_id: 'cid', client_secret: 'cs' },
     deps: {
       exchangeCode: async (params) => {
@@ -225,14 +241,15 @@ test('OAuth: the callback exchanges the code, stores the token and starts pollin
   assert.deepEqual(exchanges, [
     { clientId: 'cid', clientSecret: 'cs', code: 'code-1', redirectUri: REDIRECT },
   ]);
-  assert.deepEqual(gladys.calls.setConfigs, [{ oauth_access_token: 'oauth-token' }]);
+  assert.deepEqual(configWrites(gladys), [{ config: { oauth_access_token: 'oauth-token' } }]);
+  assert.equal(gladys.fake.config.oauth_access_token, 'oauth-token');
   assert.equal(clients[0].token, 'oauth-token');
-  assert.equal(gladys.calls.connectionStatuses.at(-1).connected, true);
+  assert.equal(gladys.fake.connectionStatuses.at(-1).connected, true);
 });
 
 test('OAuth: a wrong, reused or expired state is refused', async () => {
   const clock = { now: NOW };
-  const { integration } = setup({
+  const { integration } = await setup({
     config: { client_id: 'cid', client_secret: 'cs' },
     deps: { now: () => clock.now, exchangeCode: async () => 'tok' },
   });
@@ -251,7 +268,7 @@ test('OAuth: a wrong, reused or expired state is refused', async () => {
 });
 
 test('OAuth: a refused code exchange is reported in both languages', async () => {
-  const { integration, gladys } = setup({
+  const { integration, gladys } = await setup({
     config: { client_id: 'cid', client_secret: 'cs' },
     deps: {
       exchangeCode: async () => {
@@ -268,11 +285,11 @@ test('OAuth: a refused code exchange is reported in both languages', async () =>
     }),
     /refused the access/,
   );
-  assert.equal(gladys.calls.setConfigs.length, 0);
+  assert.deepEqual(configWrites(gladys), []);
 });
 
 test('scene actions: create a task, then refresh; failures are readable', async () => {
-  const { integration, clients, calls } = setup();
+  const { integration, clients, calls } = await setup();
   await integration.applyConfig({ oauth_access_token: 'tp' });
   const outputs = await integration.sceneCreateTask({ title: 'Buy bread', list_name: 'groceries' });
   assert.deepEqual(outputs, { task_id: 'new-id', list_name: 'Groceries' });
@@ -292,7 +309,7 @@ const formValues = (values = {}) => ({
 });
 
 test('widget Add task: creates the task typed in the form, in the list picked by id', async () => {
-  const { integration, clients, calls } = setup();
+  const { integration, clients, calls } = await setup();
   await integration.applyConfig({ oauth_access_token: 'tp' });
   const toast = await integration.widgetAction(
     'add_task',
@@ -321,7 +338,7 @@ test('widget Add task: creates the task typed in the form, in the list picked by
 });
 
 test('widget Add task: the inbox by default, and when the picked list is gone', async () => {
-  const { integration, clients } = setup();
+  const { integration, clients } = await setup();
   await integration.applyConfig({ oauth_access_token: 'tp' });
   const toast = await integration.widgetAction('add_task', {}, formValues());
   assert.deepEqual(toast, {
@@ -339,7 +356,7 @@ test('widget Add task: the inbox by default, and when the picked list is gone', 
 });
 
 test('widget Add task: no values (Gladys < 5.2.0) or an empty title create nothing', async () => {
-  const { integration, clients, calls } = setup();
+  const { integration, clients, calls } = await setup();
   await integration.applyConfig({ oauth_access_token: 'tp' });
   const older = await integration.widgetAction('add_task', {}, { settings: {} });
   assert.match(older.en, /needs Gladys 5\.2\.0/);
@@ -354,7 +371,7 @@ test('widget Add task: no values (Gladys < 5.2.0) or an empty title create nothi
 });
 
 test('widget Add task: a TickTick failure or a missing account is a readable failure', async () => {
-  const { integration, clients } = setup();
+  const { integration, clients } = await setup();
   await assert.rejects(integration.widgetAction('add_task', {}, formValues()), /Connect your/);
   await integration.applyConfig({ oauth_access_token: 'tp' });
   clients[0].createTask = async () => {
@@ -372,7 +389,7 @@ test('widget Add task: a TickTick failure or a missing account is a readable fai
 });
 
 test('widget Add task through the SDK: toast on success, failed ack on error', async () => {
-  const gladys = createSdkFakeGladys();
+  const gladys = createFakeGladys();
   const created = [];
   const client = {
     async createTask(payload) {
@@ -419,7 +436,7 @@ test('widget Add task through the SDK: toast on success, failed ack on error', a
 });
 
 test('the widget and the summary read the last snapshot', async () => {
-  const { integration } = setup();
+  const { integration } = await setup();
   await integration.applyConfig({ oauth_access_token: 'tp' });
   const content = integration.widgetTasks({ settings: { scope: 'today' }, language: 'fr' });
   assert.equal(content.components[2].items[0].title, 'Buy milk');

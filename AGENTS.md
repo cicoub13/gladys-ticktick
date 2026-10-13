@@ -76,7 +76,9 @@ Project-specific notes. Generic rules (SDK contract, commands, kit-owned files, 
 
 ## Tests
 
-- `test/helpers/fakeGladys.js` records calls; `failNext(method, n)` simulates host 429s.
+- `test/integration.test.js` runs on the SDK fake Gladys (`createFakeGladys` from
+  `@gladysassistant/integration-sdk/testing`), connected first (the SDK drops widget refresh
+  nudges while disconnected). A host failure is a `t.mock.method` on the SDK method.
 - `test/fixtures/ticktick.js`: raw API factories, normalized `task()` and a route-table
   `fakeFetch`. `test/integration.test.js` injects `createClient`, a scripted `fetchSnapshot`
   (outcomes list), `exchangeCode`, clock, state generator and timers.
