@@ -1,10 +1,6 @@
 # TickTick
 
-> **Nécessite Gladys 5.2 ou plus récent.** Cette intégration se compose d'un
-> widget de tableau de bord et de déclencheurs et d'actions de scène, arrivés
-> avec Gladys 5.1, et le formulaire **Ajouter une tâche** de son widget
-> nécessite Gladys 5.2 : sur une version antérieure, elle ne peut pas être
-> installée.
+## Présentation
 
 Retrouvez vos tâches [TickTick](https://ticktick.com) dans Gladys : un widget
 de tableau de bord avec les tâches du jour et celles en retard, une action de
@@ -15,11 +11,22 @@ notification, et un déclencheur de scène qui part quand une tâche arrive à
 
 ## Prérequis
 
+> **Nécessite Gladys 5.2 ou plus récent.** Cette intégration se compose d'un
+> widget de tableau de bord et de déclencheurs et d'actions de scène, arrivés
+> avec Gladys 5.1, et le formulaire **Ajouter une tâche** de son widget
+> nécessite Gladys 5.2 : sur une version antérieure, elle ne peut pas être
+> installée.
+
 - Un compte TickTick (gratuit ou Premium).
 - Un accès Internet depuis la machine qui fait tourner Gladys : l'intégration
   utilise l'API cloud de TickTick.
+- Une application développeur TickTick (gratuite), créée dans les étapes
+  ci-dessous : elle fournit le **Client ID** et le **Client secret** dont
+  Gladys a besoin.
 
-## Connecter votre compte
+## Configuration
+
+### Connecter votre compte
 
 1. Ouvrez le [site développeur de TickTick](https://developer.ticktick.com/manage),
    connectez-vous avec votre compte TickTick et cliquez sur **New App**. Le nom
@@ -41,7 +48,7 @@ notification, et un déclencheur de scène qui part quand une tâche arrive à
 L'accès accordé dure plusieurs mois. Quand TickTick y met fin, le statut de
 l'intégration l'indique : cliquez à nouveau sur **Connecter**.
 
-## Configuration
+### Réglages
 
 | Champ                           | Description                                                                                                                            |
 | ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
