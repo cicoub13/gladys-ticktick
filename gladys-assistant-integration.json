@@ -6,8 +6,8 @@
     "en": "Shows your TickTick tasks on the dashboard and lets scenes create tasks or react to due ones.",
     "fr": "Affiche vos tâches TickTick et permet aux scènes d'en créer ou de réagir à leurs échéances."
   },
-  "version": "0.2.0",
-  "docker_image": "ghcr.io/cicoub13/gladys-ticktick:0.2.0",
+  "version": "0.2.1",
+  "docker_image": "ghcr.io/cicoub13/gladys-ticktick:0.2.1",
   "gladys_version": ">=5.2.0",
   "cover_image": "https://raw.githubusercontent.com/cicoub13/gladys-ticktick/main/cover.png",
   "categories": ["services"],

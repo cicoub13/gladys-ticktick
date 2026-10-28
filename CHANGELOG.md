@@ -4,6 +4,12 @@ All notable changes to the TickTick integration for Gladys Assistant.
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-10-28
+
+### Changed
+
+- Maintenance release: dependency and build updates, no functional change.
+
 ## [0.2.0] - 2026-10-13
 
 ### Added
