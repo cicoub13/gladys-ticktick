@@ -1,9 +1,6 @@
 # TickTick
 
-> **Requires Gladys 5.2 or later.** This integration is made of a dashboard
-> widget and scene triggers and actions, which ship with Gladys 5.1, and its
-> widget's **Add task** form needs Gladys 5.2; on an earlier version it cannot
-> be installed.
+## Overview
 
 Bring your [TickTick](https://ticktick.com) tasks into Gladys: a dashboard
 widget with the tasks due today and the overdue ones, a scene action to create
@@ -11,13 +8,22 @@ a task (from a button, a voice command, a sensor...), another one to read your
 tasks out loud or send them in a notification, and a scene trigger that fires
 when a task reaches its due time.
 
-## Requirements
+## Prerequisites
+
+> **Requires Gladys 5.2 or later.** This integration is made of a dashboard
+> widget and scene triggers and actions, which ship with Gladys 5.1, and its
+> widget's **Add task** form needs Gladys 5.2; on an earlier version it cannot
+> be installed.
 
 - A TickTick account (free or Premium).
 - Internet access from the machine running Gladys: the integration talks to
   the TickTick cloud API.
+- A TickTick developer app (free), created in the steps below: it gives
+  the **Client ID** and **Client secret** Gladys needs.
 
-## Connecting your account
+## Configuration
+
+### Connecting your account
 
 1. Open the [TickTick developer site](https://developer.ticktick.com/manage),
    sign in with your TickTick account and click **New App**. Any name will do,
@@ -37,7 +43,7 @@ when a task reaches its due time.
 The access granted lasts several months. When TickTick ends it, the status of
 the integration says so: click **Connect** again.
 
-## Configuration
+### Settings
 
 | Field                      | Description                                                                                                  |
 | -------------------------- | ------------------------------------------------------------------------------------------------------------ |
