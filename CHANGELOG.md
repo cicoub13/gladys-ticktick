@@ -4,6 +4,12 @@ All notable changes to the TickTick integration for Gladys Assistant.
 
 ## [Unreleased]
 
+### Fixed
+
+- The container image is rebuilt on a patched Alpine base (musl 1.2.6-r3,
+  zlib 1.3.2-r1), replacing a base affected by published security
+  advisories. No functional change.
+
 ## [0.2.1] - 2026-10-28
 
 ### Changed
